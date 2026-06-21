@@ -34,19 +34,38 @@ export function observarLogin(callback) {
   return onAuthStateChanged(auth, callback);
 }
 
-export function salvarSemana(uid, semanaId, dados) {
-  return setDoc(doc(db, "usuarios", uid, "semanas", semanaId), dados, { merge: true });
+// --- Registro de aulas por DIA exato (corrige o problema de semanas sem distinguir dias) ---
+
+export function salvarDia(uid, diaId, dados) {
+  return setDoc(doc(db, "usuarios", uid, "dias", diaId), dados, { merge: true });
 }
 
-export function observarSemana(uid, semanaId, callback) {
-  return onSnapshot(doc(db, "usuarios", uid, "semanas", semanaId), (snap) => {
+export function observarDia(uid, diaId, callback) {
+  return onSnapshot(doc(db, "usuarios", uid, "dias", diaId), (snap) => {
     callback(snap.exists() ? snap.data() : null);
   });
 }
 
-export async function buscarSemana(uid, semanaId) {
-  const snap = await getDoc(doc(db, "usuarios", uid, "semanas", semanaId));
+export async function buscarDia(uid, diaId) {
+  const snap = await getDoc(doc(db, "usuarios", uid, "dias", diaId));
   return snap.exists() ? snap.data() : null;
+}
+
+// --- Periodos especiais (ferias, feriado, atestado, outro) ---
+
+export function salvarPeriodo(uid, periodo) {
+  const id = periodo.id || doc(collection(db, "usuarios", uid, "periodos")).id;
+  return setDoc(doc(db, "usuarios", uid, "periodos", id), { ...periodo, id });
+}
+
+export function observarPeriodos(uid, callback) {
+  return onSnapshot(collection(db, "usuarios", uid, "periodos"), (snap) => {
+    callback(snap.docs.map((d) => d.data()));
+  });
+}
+
+export function excluirPeriodo(uid, id) {
+  return deleteDoc(doc(db, "usuarios", uid, "periodos", id));
 }
 
 // --- Bloco de notas (autosave + lixeira de 15 dias) ---
@@ -84,7 +103,7 @@ export function observarNota(uid, callback) {
   });
 }
 
-// --- Anotação rápida do dia (rascunho temporário, transferido depois para a tabela oficial) ---
+// --- Anotação rápida do dia (rascunho temporário, transferido depois para o registro oficial) ---
 
 export function salvarRascunho(uid, dataId, dados) {
   return setDoc(doc(db, "usuarios", uid, "rascunhos", dataId), dados, { merge: true });
