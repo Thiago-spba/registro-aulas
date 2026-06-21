@@ -12,6 +12,9 @@ import {
   restaurarNota,
   excluirNotaDefinitivamente,
   observarNota,
+  salvarRascunho,
+  observarRascunho,
+  excluirRascunho,
 } from "./firebase";
 
 const DIAS_LIXEIRA = 15;
@@ -72,6 +75,11 @@ function nomeDoMes(offset) {
   const { id } = semanaInfo(offset);
   const [ano, mes] = id.split("-").map(Number);
   return `${MESES_NOMES[mes - 1]} de ${ano}`;
+}
+
+function hojeId() {
+  const hoje = new Date();
+  return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
 }
 
 function makeEmptyRegistro(rows) {
@@ -254,6 +262,163 @@ function Tabela({ titulo, rows, dados, onChange }) {
         <strong>
           {Object.values(dados).filter((d) => d.turma.trim() !== "").length}
         </strong>
+      </div>
+    </div>
+  );
+}
+
+function RascunhoRapido({
+  user,
+  semanaOffset,
+  manhaDados,
+  tardeDados,
+  setManhaDados,
+  setTardeDados,
+  semanaId,
+  agendarSalvar,
+}) {
+  const [aberto, setAberto] = useState(false);
+  const [turmasManha, setTurmasManha] = useState({});
+  const [turmasTarde, setTurmasTarde] = useState({});
+  const saveTimer = useRef(null);
+  const dataId = hojeId();
+
+  useEffect(() => {
+    if (!user) return;
+    const unsub = observarRascunho(user.uid, dataId, (data) => {
+      setTurmasManha((data && data.manha) || {});
+      setTurmasTarde((data && data.tarde) || {});
+    });
+    return unsub;
+  }, [user, dataId]);
+
+  function aoDigitar(turno, i, valor) {
+    const atualizado =
+      turno === "manha"
+        ? { ...turmasManha, [i]: valor }
+        : { ...turmasTarde, [i]: valor };
+    if (turno === "manha") setTurmasManha(atualizado);
+    else setTurmasTarde(atualizado);
+
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      salvarRascunho(user.uid, dataId, {
+        manha: turno === "manha" ? atualizado : turmasManha,
+        tarde: turno === "tarde" ? atualizado : turmasTarde,
+      });
+    }, 400);
+  }
+
+  function apagarRascunho() {
+    excluirRascunho(user.uid, dataId);
+    setTurmasManha({});
+    setTurmasTarde({});
+  }
+
+  function transferirParaOficial() {
+    // So transfere se a semana exibida na tela for a semana atual (offset 0),
+    // que e sempre a semana de "hoje".
+    if (semanaOffset !== 0) {
+      alert(
+        'Vá para a "Semana atual" antes de transferir, pois a anotação rápida é sempre do dia de hoje.',
+      );
+      return;
+    }
+    let novaManha = manhaDados;
+    let novaTarde = tardeDados;
+    Object.entries(turmasManha).forEach(([i, valor]) => {
+      if (valor && valor.trim() !== "") {
+        novaManha = { ...novaManha, [i]: { ...novaManha[i], turma: valor } };
+      }
+    });
+    Object.entries(turmasTarde).forEach(([i, valor]) => {
+      if (valor && valor.trim() !== "") {
+        novaTarde = { ...novaTarde, [i]: { ...novaTarde[i], turma: valor } };
+      }
+    });
+    setManhaDados(novaManha);
+    setTardeDados(novaTarde);
+    agendarSalvar(novaManha, novaTarde);
+    apagarRascunho();
+    setAberto(false);
+  }
+
+  const temAlgo =
+    Object.values(turmasManha).some((v) => v && v.trim() !== "") ||
+    Object.values(turmasTarde).some((v) => v && v.trim() !== "");
+
+  if (!aberto) {
+    return (
+      <button className="botao-rascunho-abrir" onClick={() => setAberto(true)}>
+        ⚡ Anotação rápida do dia{temAlgo ? " (tem rascunho salvo)" : ""}
+      </button>
+    );
+  }
+
+  return (
+    <div className="rascunho-bloco">
+      <div className="rascunho-cabecalho">
+        <h3>⚡ Anotação rápida — hoje</h3>
+        <button
+          className="botao-fechar-rascunho"
+          onClick={() => setAberto(false)}
+        >
+          Fechar
+        </button>
+      </div>
+      <p className="rascunho-dica">
+        Anote só a sala/turma que a administração informar. Depois clique em
+        "Transferir" para preencher a tabela oficial.
+      </p>
+
+      <div className="rascunho-colunas">
+        <div className="rascunho-coluna">
+          <h4>Manhã</h4>
+          {MANHA.map((row, i) =>
+            row.intervalo ? null : (
+              <div key={i} className="rascunho-linha">
+                <span>{row.aula}</span>
+                <input
+                  value={turmasManha[i] || ""}
+                  placeholder="sala / turma"
+                  onChange={(e) => aoDigitar("manha", i, e.target.value)}
+                />
+              </div>
+            ),
+          )}
+        </div>
+        <div className="rascunho-coluna">
+          <h4>Tarde</h4>
+          {TARDE.map((row, i) =>
+            row.intervalo ? null : (
+              <div key={i} className="rascunho-linha">
+                <span>{row.aula}</span>
+                <input
+                  value={turmasTarde[i] || ""}
+                  placeholder="sala / turma"
+                  onChange={(e) => aoDigitar("tarde", i, e.target.value)}
+                />
+              </div>
+            ),
+          )}
+        </div>
+      </div>
+
+      <div className="rascunho-acoes">
+        <button
+          className="botao-transferir"
+          onClick={transferirParaOficial}
+          disabled={!temAlgo}
+        >
+          ✅ Transferir para a tabela oficial
+        </button>
+        <button
+          className="botao-apagar-rascunho"
+          onClick={apagarRascunho}
+          disabled={!temAlgo}
+        >
+          🗑 Apagar rascunho
+        </button>
       </div>
     </div>
   );
@@ -533,6 +698,17 @@ export default function App() {
           Próxima →
         </button>
       </div>
+
+      <RascunhoRapido
+        user={user}
+        semanaOffset={semanaOffset}
+        manhaDados={manhaDados}
+        tardeDados={tardeDados}
+        setManhaDados={setManhaDados}
+        setTardeDados={setTardeDados}
+        semanaId={semanaId}
+        agendarSalvar={agendarSalvar}
+      />
 
       <NotaWidget user={user} />
 

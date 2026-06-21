@@ -83,3 +83,19 @@ export function observarNota(uid, callback) {
     callback(snap.exists() ? snap.data() : null);
   });
 }
+
+// --- Anotação rápida do dia (rascunho temporário, transferido depois para a tabela oficial) ---
+
+export function salvarRascunho(uid, dataId, dados) {
+  return setDoc(doc(db, "usuarios", uid, "rascunhos", dataId), dados, { merge: true });
+}
+
+export function observarRascunho(uid, dataId, callback) {
+  return onSnapshot(doc(db, "usuarios", uid, "rascunhos", dataId), (snap) => {
+    callback(snap.exists() ? snap.data() : null);
+  });
+}
+
+export function excluirRascunho(uid, dataId) {
+  return deleteDoc(doc(db, "usuarios", uid, "rascunhos", dataId));
+}

@@ -4,5 +4,11 @@ service cloud.firestore {
     match /usuarios/{userId}/semanas/{semanaId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
+    match /usuarios/{userId}/config/{docId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    match /usuarios/{userId}/rascunhos/{docId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
   }
 }

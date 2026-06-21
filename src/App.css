@@ -408,3 +408,118 @@ td input { color: var(--text); }
   color: #555;
 }
 [data-tema="escuro"] .botao-cancelar { background: #2e3346; color: #e8eaf0; }
+
+/* ===== Anotacao rapida do dia ===== */
+.botao-rascunho-abrir {
+  display: block;
+  width: 100%;
+  background: #fff3cd;
+  border: 1px solid #ffe28a;
+  color: #7a5b00;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-weight: bold;
+  font-size: 14px;
+  cursor: pointer;
+  margin-bottom: 20px;
+  text-align: left;
+}
+[data-tema="escuro"] .botao-rascunho-abrir {
+  background: #3a3014;
+  border-color: #5c4a1a;
+  color: #ffd97a;
+}
+.botao-rascunho-abrir:hover { opacity: 0.9; }
+
+.rascunho-bloco {
+  background: var(--bg-card);
+  border: 2px solid #ffb300;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+.rascunho-cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.rascunho-cabecalho h3 { margin: 0; color: #b8860b; font-size: 15px; }
+.botao-fechar-rascunho {
+  background: #eee;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  color: #555;
+}
+[data-tema="escuro"] .botao-fechar-rascunho { background: #2e3346; color: #e8eaf0; }
+.rascunho-dica {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 4px 0 12px;
+}
+.rascunho-colunas {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.rascunho-coluna { flex: 1; min-width: 220px; }
+.rascunho-coluna h4 {
+  margin: 0 0 8px;
+  color: var(--azul);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.rascunho-linha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.rascunho-linha span {
+  width: 70px;
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.rascunho-linha input {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 13px;
+  background: var(--bg);
+  color: var(--text);
+}
+.rascunho-acoes {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.botao-transferir {
+  background: #1f8a3b;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-weight: bold;
+  font-size: 13px;
+  cursor: pointer;
+}
+.botao-transferir:hover { background: #17692c; }
+.botao-transferir:disabled { opacity: 0.5; cursor: default; }
+.botao-apagar-rascunho {
+  background: #d9534f;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-weight: bold;
+  font-size: 13px;
+  cursor: pointer;
+}
+.botao-apagar-rascunho:disabled { opacity: 0.5; cursor: default; }
