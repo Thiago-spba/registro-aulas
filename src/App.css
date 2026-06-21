@@ -1,0 +1,410 @@
+* { box-sizing: border-box; }
+
+.app {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 24px 16px 60px;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #1f2430;
+}
+
+.cabecalho {
+  text-align: center;
+  border-bottom: 3px solid #2F5496;
+  padding-bottom: 14px;
+  margin-bottom: 20px;
+}
+.cabecalho h1 {
+  color: #2F5496;
+  font-size: 22px;
+  margin: 0 0 6px;
+}
+.cabecalho p {
+  margin: 2px 0;
+  font-size: 13px;
+  color: #555;
+}
+.cabecalho .professor {
+  font-weight: bold;
+  color: #1f2430;
+  margin-top: 6px;
+}
+
+.nav-semana {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #2F5496;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+.nav-semana button {
+  background: white;
+  color: #2F5496;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.nav-semana button:hover { background: #e7edf7; }
+.semana-label { font-weight: bold; }
+
+.tabela-bloco { margin-bottom: 28px; }
+.tabela-bloco h3 {
+  color: #2F5496;
+  border-left: 4px solid #2F5496;
+  padding-left: 8px;
+  margin-bottom: 8px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+th, td {
+  border: 1px solid #d6dae0;
+  padding: 6px 8px;
+  text-align: left;
+}
+th {
+  background: #2F5496;
+  color: white;
+  text-align: center;
+}
+td input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-family: inherit;
+  padding: 4px;
+}
+td input:focus {
+  outline: 2px solid #2F5496;
+  background: white;
+  border-radius: 4px;
+}
+td input::placeholder {
+  color: #c2c7d1;
+  opacity: 0.5;
+}
+[data-tema="escuro"] td input::placeholder {
+  color: #4a5070;
+  opacity: 0.6;
+}
+
+.linha-intervalo {
+  background: #FFE699;
+  font-style: italic;
+  color: #7F6000;
+  text-align: center;
+}
+
+.linha-dada {
+  background: #FF9999 !important;
+  font-weight: bold;
+}
+.linha-dada td { color: #660000; }
+
+.total {
+  text-align: right;
+  margin-top: 6px;
+  font-size: 14px;
+  color: #2F5496;
+}
+
+.total-geral {
+  text-align: center;
+  font-size: 18px;
+  background: #eef2fa;
+  border: 2px solid #2F5496;
+  border-radius: 8px;
+  padding: 12px;
+  color: #2F5496;
+  margin-top: 10px;
+}
+
+.footer {
+  text-align: center;
+  margin-top: 24px;
+}
+.badge {
+  background: #fff3cd;
+  color: #7a5b00;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  border: 1px solid #ffe28a;
+}
+
+.carregando {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  font-family: Arial;
+  color: #2F5496;
+  font-size: 18px;
+}
+
+.login-tela {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: #eef2fa;
+  font-family: Arial;
+}
+.login-card {
+  background: white;
+  padding: 40px 32px;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(47,84,150,0.15);
+  text-align: center;
+  max-width: 380px;
+}
+.login-card h1 {
+  color: #2F5496;
+  font-size: 20px;
+  margin-bottom: 6px;
+}
+.login-card p { color: #555; font-size: 13px; margin: 2px 0; }
+.login-card .subtitulo { margin-top: 10px; font-weight: bold; color: #1f2430; }
+.botao-login {
+  margin-top: 20px;
+  background: #2F5496;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 15px;
+  cursor: pointer;
+}
+.botao-login:hover { background: #244277; }
+
+.cabecalho-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.botao-sair {
+  background: #eee;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #555;
+}
+.botao-sair:hover { background: #ddd; }
+
+.nav-semana select {
+  font-weight: bold;
+  border-radius: 6px;
+  padding: 6px 10px;
+  border: none;
+  cursor: pointer;
+}
+
+.acoes {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.status-salvando {
+  font-size: 13px;
+  color: #2F5496;
+  margin-right: auto;
+  font-weight: bold;
+}
+.botao-exportar, .botao-imprimir {
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 13px;
+  color: white;
+}
+.botao-exportar { background: #1f8a3b; }
+.botao-exportar:hover { background: #17692c; }
+.botao-imprimir { background: #555; }
+.botao-imprimir:hover { background: #3a3a3a; }
+
+@media print {
+  .nav-semana, .acoes, .botao-sair { display: none !important; }
+}
+
+/* ===== Dark mode ===== */
+:root {
+  --bg: #ffffff;
+  --bg-card: #ffffff;
+  --text: #1f2430;
+  --text-muted: #555;
+  --border: #d6dae0;
+  --azul: #2F5496;
+  --azul-claro: #eef2fa;
+}
+[data-tema="escuro"] {
+  --bg: #14171f;
+  --bg-card: #1c2030;
+  --text: #e8eaf0;
+  --text-muted: #a0a6b8;
+  --border: #2e3346;
+  --azul: #5b85d6;
+  --azul-claro: #1e2740;
+}
+
+body, .app { background: var(--bg); color: var(--text); transition: background .2s, color .2s; }
+.cabecalho { border-bottom-color: var(--azul); }
+.cabecalho h1 { color: var(--azul); }
+.cabecalho p { color: var(--text-muted); }
+.cabecalho .professor { color: var(--text); }
+
+table { color: var(--text); }
+th, td { border-color: var(--border); }
+td input { color: var(--text); }
+.tabela-bloco h3 { color: var(--azul); border-left-color: var(--azul); }
+.total { color: var(--azul); }
+.total-geral { background: var(--azul-claro); border-color: var(--azul); color: var(--azul); }
+
+.login-tela { background: var(--azul-claro); }
+.login-card { background: var(--bg-card); }
+.login-card h1 { color: var(--azul); }
+.login-card p { color: var(--text-muted); }
+.login-card .subtitulo { color: var(--text); }
+
+.botao-tema {
+  background: #eee;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #333;
+  margin-left: 8px;
+}
+[data-tema="escuro"] .botao-tema { background: #2e3346; color: #e8eaf0; }
+.botao-tema:hover { opacity: 0.8; }
+
+/* ===== Bloco de notas ===== */
+.nota-bloco {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+.nota-cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.nota-cabecalho h3 { margin: 0; color: var(--azul); font-size: 15px; }
+.botao-apagar-nota {
+  background: #d9534f;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.botao-apagar-nota:disabled { opacity: 0.4; cursor: default; }
+.nota-texto {
+  width: 100%;
+  min-height: 80px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  font-family: Arial;
+  font-size: 14px;
+  resize: vertical;
+  background: var(--bg);
+  color: var(--text);
+}
+.nota-lixeira {
+  background: #fff3cd;
+  border: 1px solid #ffe28a;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #7a5b00;
+}
+.nota-preview { font-style: italic; opacity: 0.8; }
+.botao-restaurar {
+  background: #2F5496;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+/* ===== Painel exportar por periodo ===== */
+.botao-periodo {
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 13px;
+  color: white;
+  background: #6a4fae;
+}
+.botao-periodo:hover { background: #533c8a; }
+.botao-exportar:disabled, .botao-periodo:disabled { opacity: 0.6; cursor: default; }
+
+.painel-exportar {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+.painel-exportar h4 { margin: 0 0 10px; color: var(--azul); }
+.painel-exportar-linha {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.painel-exportar-linha label {
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  color: var(--text-muted);
+  gap: 4px;
+}
+.painel-exportar-linha select {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+.painel-exportar-acoes {
+  display: flex;
+  gap: 10px;
+}
+.botao-cancelar {
+  background: #eee;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #555;
+}
+[data-tema="escuro"] .botao-cancelar { background: #2e3346; color: #e8eaf0; }
