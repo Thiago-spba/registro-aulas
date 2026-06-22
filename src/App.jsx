@@ -226,7 +226,7 @@ async function exportarIntervalo(uid, periodos, inicioId, fimId, dataAtualId, ma
 // --- Componentes ---
 
 const ANOS_TURMA = ['1º', '2º', '3º', '4º', '5º', '6º', '7º', '8º', '9º']
-const LETRAS_TURMA = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+const LETRAS_TURMA = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
 
 function partesTurma(turma) {
   const m = (turma || '').match(/^(\d+)º?\s*([A-Za-z]?)$/)
