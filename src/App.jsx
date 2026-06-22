@@ -1,4 +1,4 @@
-   import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import './App.css'
 import {
   loginComGoogle, logout, observarLogin,
@@ -225,6 +225,36 @@ async function exportarIntervalo(uid, periodos, inicioId, fimId, dataAtualId, ma
 
 // --- Componentes ---
 
+const ANOS_TURMA = ['1º', '2º', '3º', '4º', '5º', '6º', '7º', '8º', '9º']
+const LETRAS_TURMA = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+
+function partesTurma(turma) {
+  const m = (turma || '').match(/^(\d+)º?\s*([A-Za-z]?)$/)
+  if (m) return { ano: m[1] + 'º', letra: m[2].toUpperCase() }
+  return { ano: '', letra: '' }
+}
+
+function juntarTurma(ano, letra) {
+  if (!ano && !letra) return ''
+  return `${ano}${letra ? ' ' + letra : ''}`.trim()
+}
+
+function SeletorTurma({ valor, onChange }) {
+  const { ano, letra } = partesTurma(valor)
+  return (
+    <div className="seletor-turma">
+      <select value={ano} onChange={(e) => onChange(juntarTurma(e.target.value, letra))}>
+        <option value="">Ano</option>
+        {ANOS_TURMA.map((a) => <option key={a} value={a}>{a}</option>)}
+      </select>
+      <select value={letra} onChange={(e) => onChange(juntarTurma(ano, e.target.value))}>
+        <option value="">Turma</option>
+        {LETRAS_TURMA.map((l) => <option key={l} value={l}>{l}</option>)}
+      </select>
+    </div>
+  )
+}
+
 function Tabela({ titulo, rows, dados, onChange }) {
   return (
     <div className="tabela-bloco">
@@ -250,7 +280,7 @@ function Tabela({ titulo, rows, dados, onChange }) {
             return (
               <tr key={i} className={preenchida ? 'linha-dada' : ''}>
                 <td>{row.aula}</td><td>{row.inicio}</td><td>{row.fim}</td>
-                <td><input value={d.turma} placeholder="ex: 7º A" onChange={(e) => onChange(i, 'turma', e.target.value)} /></td>
+                <td><SeletorTurma valor={d.turma} onChange={(v) => onChange(i, 'turma', v)} /></td>
                 <td><input value={d.professor} placeholder="ex: Maria — Matemática" onChange={(e) => onChange(i, 'professor', e.target.value)} /></td>
                 <td><input value={d.conteudo} placeholder="ex: Equações de 1º grau" onChange={(e) => onChange(i, 'conteudo', e.target.value)} /></td>
               </tr>
@@ -755,4 +785,4 @@ export default function App() {
       )}
     </div>
   )
-}   
+}
