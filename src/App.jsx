@@ -229,7 +229,8 @@ const ANOS_TURMA = ['1º', '2º', '3º', '4º', '5º', '6º', '7º', '8º', '9º
 const LETRAS_TURMA = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
 
 function partesTurma(turma) {
-  const m = (turma || '').match(/^(\d+)º?\s*([A-Za-z]?)$/)
+  const limpo = (turma || '').trim()
+  const m = limpo.match(/^(\d+)\s*[º°o]?\.?\s*([A-Za-z]?)/i)
   if (m) return { ano: m[1] + 'º', letra: m[2].toUpperCase() }
   return { ano: '', letra: '' }
 }
