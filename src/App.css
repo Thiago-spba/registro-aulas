@@ -523,3 +523,162 @@ td input { color: var(--text); }
   cursor: pointer;
 }
 .botao-apagar-rascunho:disabled { opacity: 0.5; cursor: default; }
+
+/* ===== Navegacao por dia ===== */
+.nav-dia {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #2F5496;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.nav-dia button {
+  background: white;
+  color: #2F5496;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.nav-dia button:hover { background: #e7edf7; }
+.nav-dia-central {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.nav-dia-central input[type="date"] {
+  border: none;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-weight: bold;
+  color: #2F5496;
+}
+.nav-dia-nome { font-weight: bold; font-size: 13px; }
+.botao-ir-hoje {
+  background: #ffd166 !important;
+  color: #6b4e00 !important;
+  font-size: 12px !important;
+  padding: 4px 10px !important;
+}
+
+/* ===== Painel de periodos especiais ===== */
+.botao-periodos-abrir {
+  display: block;
+  width: 100%;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--azul);
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-weight: bold;
+  font-size: 14px;
+  cursor: pointer;
+  margin-bottom: 16px;
+  text-align: left;
+}
+.botao-periodos-abrir:hover { opacity: 0.85; }
+
+.painel-periodos {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+.painel-periodos-cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.painel-periodos-cabecalho h3 { margin: 0; color: var(--azul); font-size: 15px; }
+
+.periodo-form {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin: 12px 0;
+}
+.periodo-form label {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  color: var(--text-muted);
+  gap: 4px;
+}
+.periodo-form select,
+.periodo-form input[type="date"],
+.periodo-form input[type="text"] {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+}
+.periodo-form-obs { flex: 1; min-width: 160px; }
+
+.periodo-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+.periodo-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ===== Aviso de periodo ativo (substitui as tabelas) ===== */
+.aviso-periodo {
+  background: #fff3cd;
+  border: 2px solid #ffb300;
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+  margin-top: 10px;
+}
+[data-tema="escuro"] .aviso-periodo {
+  background: #3a3014;
+  border-color: #b8860b;
+}
+.aviso-periodo h3 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  color: #7a5b00;
+}
+[data-tema="escuro"] .aviso-periodo h3 { color: #ffd97a; }
+.aviso-periodo p {
+  margin: 4px 0;
+  color: #7a5b00;
+}
+[data-tema="escuro"] .aviso-periodo p { color: #e8d9a8; }
+.aviso-periodo-obs { font-style: italic; }
+.aviso-periodo-legenda {
+  font-size: 12px;
+  margin-top: 10px;
+  opacity: 0.8;
+}
+
+.total-semana {
+  font-size: 14px;
+  margin-top: 6px;
+  opacity: 0.85;
+}
