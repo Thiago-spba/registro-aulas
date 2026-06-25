@@ -1,359 +1,803 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
-import './App.css'
+import { useState, useEffect, useMemo, useRef } from "react";
+import "./App.css";
 import {
-  loginComGoogle, logout, observarLogin,
-  salvarDia, observarDia, buscarDia,
-  salvarPeriodo, observarPeriodos, excluirPeriodo,
-  salvarNota, moverNotaParaLixeira, restaurarNota, excluirNotaDefinitivamente, observarNota,
-  salvarRascunho, observarRascunho, excluirRascunho,
-} from './firebase'
+  loginComGoogle,
+  logout,
+  observarLogin,
+  salvarDia,
+  observarDia,
+  buscarDia,
+  salvarPeriodo,
+  observarPeriodos,
+  excluirPeriodo,
+  salvarNota,
+  moverNotaParaLixeira,
+  restaurarNota,
+  excluirNotaDefinitivamente,
+  observarNota,
+  salvarRascunho,
+  observarRascunho,
+  excluirRascunho,
+} from "./firebase";
 
-const DIAS_LIXEIRA = 15
+const DIAS_LIXEIRA = 15;
 
-const ESCOLA = 'E.E. Prof. Simão Mathias'
-const ENDERECO = 'Av. Ragueb Chohfi, 4757 — Jardim Três Marias, São Paulo - SP, 08380-330'
+const ESCOLA = "E.E. Prof. Simão Mathias";
+const ENDERECO =
+  "Av. Ragueb Chohfi, 4757 — Jardim Três Marias, São Paulo - SP, 08380-330";
 
 const MANHA = [
-  { aula: '1ª aula', inicio: '7h00', fim: '7h50' },
-  { aula: '2ª aula', inicio: '7h50', fim: '8h40' },
-  { aula: '3ª aula', inicio: '8h40', fim: '9h30' },
-  { aula: 'Intervalo', inicio: '9h30', fim: '9h50', intervalo: true },
-  { aula: '4ª aula', inicio: '9h50', fim: '10h40' },
-  { aula: '5ª aula', inicio: '10h40', fim: '11h30' },
-  { aula: '6ª aula', inicio: '11h30', fim: '12h20' },
-]
+  { aula: "1ª aula", inicio: "7h00", fim: "7h50" },
+  { aula: "2ª aula", inicio: "7h50", fim: "8h40" },
+  { aula: "3ª aula", inicio: "8h40", fim: "9h30" },
+  { aula: "Intervalo", inicio: "9h30", fim: "9h50", intervalo: true },
+  { aula: "4ª aula", inicio: "9h50", fim: "10h40" },
+  { aula: "5ª aula", inicio: "10h40", fim: "11h30" },
+  { aula: "6ª aula", inicio: "11h30", fim: "12h20" },
+];
 
 const TARDE = [
-  { aula: '1ª aula', inicio: '13h00', fim: '13h50' },
-  { aula: '2ª aula', inicio: '13h50', fim: '14h40' },
-  { aula: '3ª aula', inicio: '14h40', fim: '15h30' },
-  { aula: 'Intervalo', inicio: '15h30', fim: '15h50', intervalo: true },
-  { aula: '4ª aula', inicio: '15h50', fim: '16h40' },
-  { aula: '5ª aula', inicio: '16h40', fim: '17h30' },
-  { aula: '6ª aula', inicio: '17h30', fim: '18h20' },
-]
+  { aula: "1ª aula", inicio: "13h00", fim: "13h50" },
+  { aula: "2ª aula", inicio: "13h50", fim: "14h40" },
+  { aula: "3ª aula", inicio: "14h40", fim: "15h30" },
+  { aula: "Intervalo", inicio: "15h30", fim: "15h50", intervalo: true },
+  { aula: "4ª aula", inicio: "15h50", fim: "16h40" },
+  { aula: "5ª aula", inicio: "16h40", fim: "17h30" },
+  { aula: "6ª aula", inicio: "17h30", fim: "18h20" },
+];
 
-const NOMES_DIA_SEMANA = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
-const MESES_NOMES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
+const NOMES_DIA_SEMANA = [
+  "Domingo",
+  "Segunda-feira",
+  "Terça-feira",
+  "Quarta-feira",
+  "Quinta-feira",
+  "Sexta-feira",
+  "Sábado",
+];
+const MESES_NOMES = [
+  "janeiro",
+  "fevereiro",
+  "março",
+  "abril",
+  "maio",
+  "junho",
+  "julho",
+  "agosto",
+  "setembro",
+  "outubro",
+  "novembro",
+  "dezembro",
+];
 
 const TIPOS_PERIODO = [
-  { valor: 'ferias', rotulo: '🏖️ Férias' },
-  { valor: 'feriado', rotulo: '📅 Feriado' },
-  { valor: 'atestado', rotulo: '🩺 Atestado' },
-  { valor: 'outro', rotulo: 'ℹ️ Outro motivo' },
-]
+  { valor: "ferias", rotulo: "🏖️ Férias" },
+  { valor: "recesso", rotulo: "🏫 Recesso escolar" },
+  { valor: "feriado", rotulo: "📅 Feriado" },
+  { valor: "atestado", rotulo: "🩺 Atestado" },
+  { valor: "outro", rotulo: "ℹ️ Outro motivo" },
+];
 
 function rotuloTipoPeriodo(tipo) {
-  const item = TIPOS_PERIODO.find((t) => t.valor === tipo)
-  return item ? item.rotulo : tipo
+  const item = TIPOS_PERIODO.find((t) => t.valor === tipo);
+  return item ? item.rotulo : tipo;
 }
 
 // --- Funções de data (tudo baseado em ID "AAAA-MM-DD", sem ambiguidade de fuso) ---
 
 function pad(n) {
-  return String(n).padStart(2, '0')
+  return String(n).padStart(2, "0");
 }
 
 function toId(date) {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 function fromId(id) {
-  const [ano, mes, dia] = id.split('-').map(Number)
-  return new Date(ano, mes - 1, dia)
+  const [ano, mes, dia] = id.split("-").map(Number);
+  return new Date(ano, mes - 1, dia);
 }
 
 function addDias(date, n) {
-  const d = new Date(date)
-  d.setDate(d.getDate() + n)
-  return d
+  const d = new Date(date);
+  d.setDate(d.getDate() + n);
+  return d;
 }
 
 function fmtData(date) {
-  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`
+  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
 }
 
 function fmtDataId(id) {
-  return fmtData(fromId(id))
+  return fmtData(fromId(id));
 }
 
 function nomeDiaSemana(date) {
-  return NOMES_DIA_SEMANA[date.getDay()]
+  return NOMES_DIA_SEMANA[date.getDay()];
 }
 
 function hojeId() {
-  return toId(new Date())
+  return toId(new Date());
 }
 
 function ehFimDeSemana(date) {
-  const d = date.getDay()
-  return d === 0 || d === 6
+  const d = date.getDay();
+  return d === 0 || d === 6;
 }
 
 function diaAnteriorUtil(id) {
-  let d = addDias(fromId(id), -1)
-  while (ehFimDeSemana(d)) d = addDias(d, -1)
-  return toId(d)
+  let d = addDias(fromId(id), -1);
+  while (ehFimDeSemana(d)) d = addDias(d, -1);
+  return toId(d);
 }
 
 function diaProximoUtil(id) {
-  let d = addDias(fromId(id), 1)
-  while (ehFimDeSemana(d)) d = addDias(d, 1)
-  return toId(d)
+  let d = addDias(fromId(id), 1);
+  while (ehFimDeSemana(d)) d = addDias(d, 1);
+  return toId(d);
 }
 
 function primeiroUltimoDiaMes(dataId) {
-  const d = fromId(dataId)
-  const ano = d.getFullYear()
-  const mes = d.getMonth()
-  const primeiro = new Date(ano, mes, 1)
-  const ultimo = new Date(ano, mes + 1, 0)
-  return { inicio: toId(primeiro), fim: toId(ultimo) }
+  const d = fromId(dataId);
+  const ano = d.getFullYear();
+  const mes = d.getMonth();
+  const primeiro = new Date(ano, mes, 1);
+  const ultimo = new Date(ano, mes + 1, 0);
+  return { inicio: toId(primeiro), fim: toId(ultimo) };
 }
 
 function primeiroUltimoDiaSemana(dataId) {
-  const d = fromId(dataId)
-  const diaSemana = d.getDay() // 0=domingo, 1=segunda, ... 6=sabado
-  const deltaSegunda = diaSemana === 0 ? -6 : 1 - diaSemana
-  const segunda = addDias(d, deltaSegunda)
-  const sexta = addDias(segunda, 4)
-  return { inicio: toId(segunda), fim: toId(sexta) }
+  const d = fromId(dataId);
+  const diaSemana = d.getDay(); // 0=domingo, 1=segunda, ... 6=sabado
+  const deltaSegunda = diaSemana === 0 ? -6 : 1 - diaSemana;
+  const segunda = addDias(d, deltaSegunda);
+  const sexta = addDias(segunda, 4);
+  return { inicio: toId(segunda), fim: toId(sexta) };
 }
 
 function nomeMesAno(dataId) {
-  const d = fromId(dataId)
-  return `${MESES_NOMES[d.getMonth()]} de ${d.getFullYear()}`
+  const d = fromId(dataId);
+  return `${MESES_NOMES[d.getMonth()]} de ${d.getFullYear()}`;
 }
 
 function periodoQueCobre(periodos, dataId) {
-  return periodos.find((p) => p.inicio <= dataId && dataId <= p.fim)
+  return periodos.find((p) => p.inicio <= dataId && dataId <= p.fim);
 }
 
 function makeEmptyRegistro(rows) {
-  const r = {}
+  const r = {};
   rows.forEach((row, i) => {
-    if (!row.intervalo) r[i] = { turma: '', professor: '', conteudo: '' }
-  })
-  return r
+    if (!row.intervalo) r[i] = { turma: "", professor: "", conteudo: "" };
+  });
+  return r;
 }
 
 function algumPreenchido(dados) {
-  return dados && Object.values(dados).some((d) => d.turma && d.turma.trim() !== '')
+  return (
+    dados && Object.values(dados).some((d) => d.turma && d.turma.trim() !== "")
+  );
+}
+
+function contarPreenchidos(dados) {
+  return dados
+    ? Object.values(dados).filter((d) => d.turma && d.turma.trim() !== "")
+        .length
+    : 0;
 }
 
 // --- Exportação ---
 
 function blocoDiaCSV(linhas, dataId, manhaDados, tardeDados) {
-  const d = fromId(dataId)
-  linhas.push([`════ ${nomeDiaSemana(d)} — ${fmtData(d)} ════`])
-  linhas.push([])
+  const d = fromId(dataId);
+  linhas.push([`════ ${nomeDiaSemana(d)} — ${fmtData(d)} ════`]);
+  linhas.push([]);
   const addBloco = (titulo, rows, dados) => {
-    linhas.push([titulo])
-    linhas.push(['Aula', 'Início', 'Fim', 'Turma', 'Professor / Matéria', 'Conteúdo dado'])
+    linhas.push([titulo]);
+    linhas.push([
+      "Aula",
+      "Início",
+      "Fim",
+      "Turma",
+      "Professor / Matéria",
+      "Conteúdo dado",
+    ]);
     rows.forEach((row, i) => {
       if (row.intervalo) {
-        linhas.push([row.aula, row.inicio, row.fim, '— intervalo —', '', ''])
+        linhas.push([row.aula, row.inicio, row.fim, "— intervalo —", "", ""]);
       } else {
-        const dd = dados[i] || { turma: '', professor: '', conteudo: '' }
-        linhas.push([row.aula, row.inicio, row.fim, dd.turma, dd.professor, dd.conteudo])
+        const dd = dados[i] || { turma: "", professor: "", conteudo: "" };
+        linhas.push([
+          row.aula,
+          row.inicio,
+          row.fim,
+          dd.turma,
+          dd.professor,
+          dd.conteudo,
+        ]);
       }
-    })
-    linhas.push([])
-  }
-  addBloco('Turno Manhã', MANHA, manhaDados)
-  addBloco('Turno Tarde', TARDE, tardeDados)
-  linhas.push([])
+    });
+    linhas.push([
+      "",
+      "",
+      "",
+      "",
+      "Total do turno:",
+      String(contarPreenchidos(dados)),
+    ]);
+    linhas.push([]);
+  };
+  addBloco("Turno Manhã", MANHA, manhaDados);
+  addBloco("Turno Tarde", TARDE, tardeDados);
+  const totalDia =
+    contarPreenchidos(manhaDados) + contarPreenchidos(tardeDados);
+  linhas.push(["", "", "", "", "TOTAL DO DIA:", String(totalDia)]);
+  linhas.push([]);
+  return totalDia;
 }
 
 function baixarCSV(linhas, nomeArquivo) {
-  const csv = linhas.map((l) => l.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\n')
-  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = nomeArquivo
-  a.click()
-  URL.revokeObjectURL(url)
+  const csv = linhas
+    .map((l) => l.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";"))
+    .join("\n");
+  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nomeArquivo;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
-async function exportarIntervalo(uid, periodos, inicioId, fimId, dataAtualId, manhaAtual, tardeAtual) {
-  const linhas = []
-  linhas.push([ESCOLA])
-  linhas.push(['Professor: Thiago Fernando'])
-  linhas.push([`Período: ${fmtDataId(inicioId)} a ${fmtDataId(fimId)}`])
-  linhas.push([])
+async function exportarIntervalo(
+  uid,
+  periodos,
+  inicioId,
+  fimId,
+  dataAtualId,
+  manhaAtual,
+  tardeAtual,
+) {
+  const linhas = [];
+  linhas.push([ESCOLA]);
+  linhas.push(["Professor: Thiago Fernando"]);
+  linhas.push([`Período: ${fmtDataId(inicioId)} a ${fmtDataId(fimId)}`]);
+  linhas.push([]);
 
-  let cursor = fromId(inicioId)
-  const fim = fromId(fimId)
-  let teveConteudo = false
+  let cursor = fromId(inicioId);
+  const fim = fromId(fimId);
+  let teveConteudo = false;
+  let totalGeral = 0;
+  let diasComAula = 0;
 
   while (cursor <= fim) {
-    const id = toId(cursor)
-    const periodo = periodoQueCobre(periodos, id)
+    const id = toId(cursor);
+    const periodo = periodoQueCobre(periodos, id);
 
     if (periodo) {
-      linhas.push([`── ${rotuloTipoPeriodo(periodo.tipo)}: ${fmtDataId(periodo.inicio)} a ${fmtDataId(periodo.fim)}${periodo.observacao ? ' — ' + periodo.observacao : ''} ──`])
-      linhas.push([])
-      teveConteudo = true
-      const proximoCursor = addDias(fromId(periodo.fim), 1)
-      cursor = proximoCursor > cursor ? proximoCursor : addDias(cursor, 1)
-      continue
+      linhas.push([
+        `── ${rotuloTipoPeriodo(periodo.tipo)}: ${fmtDataId(periodo.inicio)} a ${fmtDataId(periodo.fim)}${periodo.observacao ? " — " + periodo.observacao : ""} ──`,
+      ]);
+      linhas.push([]);
+      teveConteudo = true;
+      const proximoCursor = addDias(fromId(periodo.fim), 1);
+      cursor = proximoCursor > cursor ? proximoCursor : addDias(cursor, 1);
+      continue;
     }
 
-    let dados
+    let dados;
     if (id === dataAtualId) {
-      dados = { manha: manhaAtual, tarde: tardeAtual }
+      dados = { manha: manhaAtual, tarde: tardeAtual };
     } else {
-      dados = await buscarDia(uid, id)
+      dados = await buscarDia(uid, id);
     }
 
-    if (dados && (algumPreenchido(dados.manha) || algumPreenchido(dados.tarde))) {
-      blocoDiaCSV(linhas, id, dados.manha || makeEmptyRegistro(MANHA), dados.tarde || makeEmptyRegistro(TARDE))
-      teveConteudo = true
+    if (
+      dados &&
+      (algumPreenchido(dados.manha) || algumPreenchido(dados.tarde))
+    ) {
+      const totalDia = blocoDiaCSV(
+        linhas,
+        id,
+        dados.manha || makeEmptyRegistro(MANHA),
+        dados.tarde || makeEmptyRegistro(TARDE),
+      );
+      totalGeral += totalDia;
+      diasComAula += 1;
+      teveConteudo = true;
     }
 
-    cursor = addDias(cursor, 1)
+    cursor = addDias(cursor, 1);
   }
 
   if (!teveConteudo) {
-    linhas.push(['Nenhuma aula ou período especial registrado neste intervalo.'])
+    linhas.push([
+      "Nenhuma aula ou período especial registrado neste intervalo.",
+    ]);
+  } else {
+    linhas.push(["════ RESUMO DO PERÍODO ════"]);
+    linhas.push(["Dias com aula registrada:", String(diasComAula)]);
+    linhas.push(["TOTAL GERAL DE AULAS:", String(totalGeral)]);
   }
 
-  const nomeBase = `registro-aulas_${inicioId}_a_${fimId}`
-  baixarCSV(linhas, `${nomeBase}.csv`)
+  const nomeBase = `registro-aulas_${inicioId}_a_${fimId}`;
+  baixarCSV(linhas, `${nomeBase}.csv`);
 }
 
 // --- Componentes ---
 
-const ANOS_TURMA = ['1º', '2º', '3º', '4º', '5º', '6º', '7º', '8º', '9º']
-const LETRAS_TURMA = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
+const ANOS_TURMA = ["1º", "2º", "3º", "4º", "5º", "6º", "7º", "8º", "9º"];
+const LETRAS_TURMA = [
+  "A",
+  "B",
+  "C",
+  "D",
+  "E",
+  "F",
+  "G",
+  "H",
+  "I",
+  "J",
+  "K",
+  "L",
+  "M",
+  "N",
+  "O",
+  "P",
+  "Q",
+  "R",
+  "S",
+  "T",
+  "U",
+  "V",
+  "W",
+  "X",
+  "Y",
+  "Z",
+];
 
+// Reconhece formatos antigos digitados à mão: "6ª A", "6º A", "6A", "Sala 6 A",
+// "Turma: 6-A", "06 A", etc. Sempre tenta achar um número de 1 a 9 seguido,
+// em algum momento, de uma letra de A a Z.
 function partesTurma(turma) {
-  const limpo = (turma || '').trim()
-  const m = limpo.match(/^(\d+)\s*[º°o]?\.?\s*([A-Za-z]?)/i)
-  if (m) return { ano: m[1] + 'º', letra: m[2].toUpperCase() }
-  return { ano: '', letra: '' }
+  let limpo = (turma || "").trim();
+  if (!limpo) return { ano: "", letra: "" };
+
+  // remove prefixos comuns tipo "Turma:", "Sala", "Classe"
+  limpo = limpo.replace(/^(turma|sala|classe)\s*[:\-]?\s*/i, "");
+
+  // aceita: número, indicador ordinal opcional (º ° ª o .), separador opcional (- / espaço), letra opcional
+  const m = limpo.match(/(\d{1,2})\s*[º°ªo.]*\s*[-/]?\s*([a-z])?/i);
+  if (m) {
+    const ano = `${parseInt(m[1], 10)}º`;
+    const letra = (m[2] || "").toUpperCase();
+    // só aceita anos de 1º a 9º (faixa válida da escola); fora disso, não reconhece
+    const anoNum = parseInt(m[1], 10);
+    if (anoNum >= 1 && anoNum <= 9) {
+      return { ano, letra };
+    }
+  }
+  return { ano: "", letra: "" };
 }
 
 function juntarTurma(ano, letra) {
-  if (!ano && !letra) return ''
-  return `${ano}${letra ? ' ' + letra : ''}`.trim()
+  if (!ano && !letra) return "";
+  return `${ano}${letra ? " " + letra : ""}`.trim();
 }
 
 function SeletorTurma({ valor, onChange }) {
-  const { ano, letra } = partesTurma(valor)
+  const { ano, letra } = partesTurma(valor);
+  const temTextoOriginal = valor && valor.trim() !== "";
+  const naoReconhecido = temTextoOriginal && !ano;
+
   return (
     <div className="seletor-turma">
-      <select value={ano} onChange={(e) => onChange(juntarTurma(e.target.value, letra))}>
-        <option value="">Ano</option>
-        {ANOS_TURMA.map((a) => <option key={a} value={a}>{a}</option>)}
-      </select>
-      <select value={letra} onChange={(e) => onChange(juntarTurma(ano, e.target.value))}>
-        <option value="">Turma</option>
-        {LETRAS_TURMA.map((l) => <option key={l} value={l}>{l}</option>)}
-      </select>
+      <div className="seletor-turma-linha">
+        <select
+          value={ano}
+          onChange={(e) => onChange(juntarTurma(e.target.value, letra))}
+        >
+          <option value="">Ano</option>
+          {ANOS_TURMA.map((a) => (
+            <option key={a} value={a}>
+              {a}
+            </option>
+          ))}
+        </select>
+        <select
+          value={letra}
+          onChange={(e) => onChange(juntarTurma(ano, e.target.value))}
+        >
+          <option value="">Turma</option>
+          {LETRAS_TURMA.map((l) => (
+            <option key={l} value={l}>
+              {l}
+            </option>
+          ))}
+        </select>
+      </div>
+      {naoReconhecido && (
+        <span
+          className="turma-original-aviso"
+          title="Este dado antigo não foi reconhecido pelo formato atual. Nada foi perdido — o texto original continua salvo. Selecione Ano/Turma acima para corrigir, se quiser."
+        >
+          ⚠️ valor salvo: "{valor}"
+        </span>
+      )}
     </div>
-  )
+  );
 }
 
-function Tabela({ titulo, rows, dados, onChange }) {
+function Tabela({ titulo, rows, dados, onChange, totalSemana }) {
+  const totalTabela = Object.values(dados).filter(
+    (d) => d.turma.trim() !== "",
+  ).length;
   return (
     <div className="tabela-bloco">
       <h3>{titulo}</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Aula</th><th>Início</th><th>Fim</th><th>Turma</th><th>Professor / Matéria</th><th>Conteúdo dado</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, i) => {
-            if (row.intervalo) {
+      <div className="tabela-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Aula</th>
+              <th>Início</th>
+              <th>Fim</th>
+              <th>Turma</th>
+              <th>Professor / Matéria</th>
+              <th>Conteúdo dado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => {
+              if (row.intervalo) {
+                return (
+                  <tr key={i} className="linha-intervalo">
+                    <td>{row.aula}</td>
+                    <td>{row.inicio}</td>
+                    <td>{row.fim}</td>
+                    <td colSpan={3}>— intervalo —</td>
+                  </tr>
+                );
+              }
+              const d = dados[i] || { turma: "", professor: "", conteudo: "" };
+              const preenchida = d.turma.trim() !== "";
               return (
-                <tr key={i} className="linha-intervalo">
-                  <td>{row.aula}</td><td>{row.inicio}</td><td>{row.fim}</td>
-                  <td colSpan={3}>— intervalo —</td>
+                <tr key={i} className={preenchida ? "linha-dada" : ""}>
+                  <td>{row.aula}</td>
+                  <td>{row.inicio}</td>
+                  <td>{row.fim}</td>
+                  <td>
+                    <SeletorTurma
+                      valor={d.turma}
+                      onChange={(v) => onChange(i, "turma", v)}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      value={d.professor}
+                      placeholder="ex: Maria — Matemática"
+                      onChange={(e) => onChange(i, "professor", e.target.value)}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      value={d.conteudo}
+                      placeholder="ex: Equações de 1º grau"
+                      onChange={(e) => onChange(i, "conteudo", e.target.value)}
+                    />
+                  </td>
                 </tr>
-              )
-            }
-            const d = dados[i] || { turma: '', professor: '', conteudo: '' }
-            const preenchida = d.turma.trim() !== ''
-            return (
-              <tr key={i} className={preenchida ? 'linha-dada' : ''}>
-                <td>{row.aula}</td><td>{row.inicio}</td><td>{row.fim}</td>
-                <td><SeletorTurma valor={d.turma} onChange={(v) => onChange(i, 'turma', v)} /></td>
-                <td><input value={d.professor} placeholder="ex: Maria — Matemática" onChange={(e) => onChange(i, 'professor', e.target.value)} /></td>
-                <td><input value={d.conteudo} placeholder="ex: Equações de 1º grau" onChange={(e) => onChange(i, 'conteudo', e.target.value)} /></td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
       <div className="total">
-        Total — {titulo}: <strong>{Object.values(dados).filter((d) => d.turma.trim() !== '').length}</strong>
+        <span>
+          Total — {titulo}: <strong>{totalTabela}</strong>
+        </span>
+        {typeof totalSemana === "number" && (
+          <span className="total-semana-rodape">
+            {" "}
+            &nbsp;|&nbsp; Total na semana (Seg a Sex):{" "}
+            <strong>{totalSemana}</strong>
+          </span>
+        )}
       </div>
     </div>
-  )
+  );
+}
+
+function diasNoMes(ano, mes) {
+  return new Date(ano, mes, 0).getDate();
+}
+
+function ResumoTotais({ user, periodos }) {
+  const [aberto, setAberto] = useState(false);
+  const hoje = fromId(hojeId());
+  const [diaSel, setDiaSel] = useState(hoje.getDate());
+  const [mesSel, setMesSel] = useState(hoje.getMonth() + 1);
+  const [anoSel, setAnoSel] = useState(hoje.getFullYear());
+  const [carregando, setCarregando] = useState(false);
+  const [totalSemana2, setTotalSemana2] = useState(null);
+  const [totalMes2, setTotalMes2] = useState(null);
+  const [labelSemana, setLabelSemana] = useState("");
+  const [diasPulados, setDiasPulados] = useState(0);
+  const [detalheSemana, setDetalheSemana] = useState([]);
+  const [mostrarDetalhe, setMostrarDetalhe] = useState(false);
+
+  const maxDiaMes = diasNoMes(anoSel, mesSel);
+  const dataRef = `${anoSel}-${pad(mesSel)}-${pad(Math.min(diaSel, maxDiaMes))}`;
+
+  async function somarPeriodo(inicioId, fimId) {
+    let cursor = fromId(inicioId);
+    const fimDate = fromId(fimId);
+    let soma = 0;
+    let pulados = 0;
+    const detalhe = [];
+    while (cursor <= fimDate) {
+      const id = toId(cursor);
+      const periodo = periodoQueCobre(periodos, id);
+      if (periodo) {
+        pulados += 1;
+        detalhe.push({ id, total: 0, motivo: rotuloTipoPeriodo(periodo.tipo) });
+      } else {
+        const dados = await buscarDia(user.uid, id);
+        const totalDoDia = dados
+          ? Object.values(dados.manha || {}).filter(
+              (d) => d.turma && d.turma.trim() !== "",
+            ).length +
+            Object.values(dados.tarde || {}).filter(
+              (d) => d.turma && d.turma.trim() !== "",
+            ).length
+          : 0;
+        soma += totalDoDia;
+        detalhe.push({ id, total: totalDoDia, motivo: null });
+      }
+      cursor = addDias(cursor, 1);
+    }
+    return { soma, pulados, detalhe };
+  }
+
+  async function calcular(dataEscolhida) {
+    setCarregando(true);
+    const { inicio: iniSemana, fim: fimSemana } =
+      primeiroUltimoDiaSemana(dataEscolhida);
+    const { inicio: iniMes, fim: fimMes } = primeiroUltimoDiaMes(dataEscolhida);
+
+    const [resSemana, resMes] = await Promise.all([
+      somarPeriodo(iniSemana, fimSemana),
+      somarPeriodo(iniMes, fimMes),
+    ]);
+
+    setTotalSemana2(resSemana.soma);
+    setTotalMes2(resMes.soma);
+    setDiasPulados(resSemana.pulados);
+    setDetalheSemana(resSemana.detalhe);
+    setLabelSemana(`${fmtDataId(iniSemana)} a ${fmtDataId(fimSemana)}`);
+    setCarregando(false);
+  }
+
+  useEffect(() => {
+    if (aberto) calcular(dataRef);
+  }, [aberto, dataRef, periodos]);
+
+  if (!aberto) {
+    return (
+      <button className="botao-resumo-abrir" onClick={() => setAberto(true)}>
+        📊 Ver total de aulas (semana / mês)
+      </button>
+    );
+  }
+
+  const opcoesDia = Array.from({ length: maxDiaMes }, (_, i) => i + 1);
+
+  return (
+    <div className="painel-resumo-semanal">
+      <div className="painel-periodos-cabecalho">
+        <h3>📊 Totais</h3>
+        <button
+          className="botao-fechar-rascunho"
+          onClick={() => setAberto(false)}
+        >
+          Fechar
+        </button>
+      </div>
+      <p className="rascunho-dica">
+        Mostrando a semana e o mês atuais. Se quiser ver outra data, escolha
+        abaixo.
+      </p>
+
+      <div className="resumo-data-cascata">
+        <label>
+          Dia
+          <select
+            value={Math.min(diaSel, maxDiaMes)}
+            onChange={(e) => setDiaSel(Number(e.target.value))}
+          >
+            {opcoesDia.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Mês
+          <select
+            value={mesSel}
+            onChange={(e) => setMesSel(Number(e.target.value))}
+          >
+            {MESES_NOMES.map((nome, i) => (
+              <option key={nome} value={i + 1}>
+                {nome.charAt(0).toUpperCase() + nome.slice(1)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Ano
+          <select
+            value={anoSel}
+            onChange={(e) => setAnoSel(Number(e.target.value))}
+          >
+            {[anoSel - 1, anoSel, anoSel + 1]
+              .filter((a, i, arr) => arr.indexOf(a) === i)
+              .sort()
+              .map((a) => (
+                <option key={a} value={a}>
+                  {a}
+                </option>
+              ))}
+          </select>
+        </label>
+      </div>
+
+      {carregando ? (
+        <p>Calculando…</p>
+      ) : (
+        <>
+          {diasPulados > 0 && (
+            <p className="resumo-aviso-periodo">
+              {diasPulados} dia(s) dessa semana não contam no total porque estão
+              marcados como férias/feriado/atestado.
+            </p>
+          )}
+          <div className="resumo-totais-grid">
+            <div className="resumo-total-card">
+              <span>Semana ({labelSemana})</span>
+              <strong>{totalSemana2 ?? "…"}</strong>
+            </div>
+            <div className="resumo-total-card">
+              <span>
+                Mês de {MESES_NOMES[mesSel - 1]} de {anoSel}
+              </span>
+              <strong>{totalMes2 ?? "…"}</strong>
+            </div>
+          </div>
+
+          <button
+            className="botao-ver-detalhe"
+            onClick={() => setMostrarDetalhe(!mostrarDetalhe)}
+          >
+            {mostrarDetalhe
+              ? "▲ Esconder detalhe da semana"
+              : "▼ Ver detalhe da semana (confirmar dia a dia)"}
+          </button>
+
+          {mostrarDetalhe && (
+            <div className="resumo-semanal-dias">
+              {detalheSemana.map((d) => (
+                <div
+                  key={d.id}
+                  className={`resumo-semanal-dia ${d.total > 0 ? "tem-aula" : ""}`}
+                >
+                  <span>
+                    {nomeDiaSemana(fromId(d.id))} ({fmtDataId(d.id)})
+                    {d.motivo ? ` — ${d.motivo}` : ""}
+                  </span>
+                  <strong>{d.motivo ? "—" : d.total}</strong>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
 }
 
 function PainelPeriodos({ user, periodos }) {
-  const [aberto, setAberto] = useState(false)
-  const [tipo, setTipo] = useState('ferias')
-  const [inicio, setInicio] = useState(hojeId())
-  const [fim, setFim] = useState(hojeId())
-  const [observacao, setObservacao] = useState('')
+  const [aberto, setAberto] = useState(false);
+  const [tipo, setTipo] = useState("ferias");
+  const [inicio, setInicio] = useState(hojeId());
+  const [fim, setFim] = useState(hojeId());
+  const [observacao, setObservacao] = useState("");
 
   function salvar() {
     if (inicio > fim) {
-      alert('A data de início precisa ser antes (ou igual) à data de fim.')
-      return
+      alert("A data de início precisa ser antes (ou igual) à data de fim.");
+      return;
     }
-    salvarPeriodo(user.uid, { tipo, inicio, fim, observacao, criadoEm: Date.now() })
-    setObservacao('')
+    salvarPeriodo(user.uid, {
+      tipo,
+      inicio,
+      fim,
+      observacao,
+      criadoEm: Date.now(),
+    });
+    setObservacao("");
   }
 
   function remover(id) {
-    if (confirm('Remover este período especial?')) {
-      excluirPeriodo(user.uid, id)
+    if (confirm("Remover este período especial?")) {
+      excluirPeriodo(user.uid, id);
     }
   }
 
   if (!aberto) {
     return (
       <button className="botao-periodos-abrir" onClick={() => setAberto(true)}>
-        📅 Gerenciar períodos especiais (férias, feriado, atestado){periodos.length > 0 ? ` — ${periodos.length} cadastrado(s)` : ''}
+        📅 Gerenciar períodos especiais (férias, feriado, atestado)
+        {periodos.length > 0 ? ` — ${periodos.length} cadastrado(s)` : ""}
       </button>
-    )
+    );
   }
 
   return (
     <div className="painel-periodos">
       <div className="painel-periodos-cabecalho">
         <h3>📅 Períodos especiais</h3>
-        <button className="botao-fechar-rascunho" onClick={() => setAberto(false)}>Fechar</button>
+        <button
+          className="botao-fechar-rascunho"
+          onClick={() => setAberto(false)}
+        >
+          Fechar
+        </button>
       </div>
-      <p className="rascunho-dica">Marque férias, feriados ou atestados. Esses dias deixam de aparecer como "vazios" e mostram o motivo certo no registro e na exportação.</p>
+      <p className="rascunho-dica">
+        Marque férias, feriados ou atestados. Esses dias deixam de aparecer como
+        "vazios" e mostram o motivo certo no registro e na exportação.
+      </p>
 
       <div className="periodo-form">
         <label>
           Tipo
           <select value={tipo} onChange={(e) => setTipo(e.target.value)}>
-            {TIPOS_PERIODO.map((t) => <option key={t.valor} value={t.valor}>{t.rotulo}</option>)}
+            {TIPOS_PERIODO.map((t) => (
+              <option key={t.valor} value={t.valor}>
+                {t.rotulo}
+              </option>
+            ))}
           </select>
         </label>
         <label>
           De
-          <input type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} />
+          <input
+            type="date"
+            value={inicio}
+            onChange={(e) => setInicio(e.target.value)}
+          />
         </label>
         <label>
           Até
-          <input type="date" value={fim} onChange={(e) => setFim(e.target.value)} />
+          <input
+            type="date"
+            value={fim}
+            onChange={(e) => setFim(e.target.value)}
+          />
         </label>
         <label className="periodo-form-obs">
           Observação (opcional)
-          <input type="text" value={observacao} placeholder="ex: Atestado médico" onChange={(e) => setObservacao(e.target.value)} />
+          <input
+            type="text"
+            value={observacao}
+            placeholder="ex: Atestado médico"
+            onChange={(e) => setObservacao(e.target.value)}
+          />
         </label>
-        <button className="botao-transferir" onClick={salvar}>+ Adicionar período</button>
+        <button className="botao-transferir" onClick={salvar}>
+          + Adicionar período
+        </button>
       </div>
 
       {periodos.length > 0 && (
@@ -363,190 +807,263 @@ function PainelPeriodos({ user, periodos }) {
             .sort((a, b) => (a.inicio < b.inicio ? 1 : -1))
             .map((p) => (
               <div key={p.id} className="periodo-item">
-                <span>{rotuloTipoPeriodo(p.tipo)} — {fmtDataId(p.inicio)} a {fmtDataId(p.fim)}{p.observacao ? ` (${p.observacao})` : ''}</span>
-                <button className="botao-apagar-nota" onClick={() => remover(p.id)}>Remover</button>
+                <span>
+                  {rotuloTipoPeriodo(p.tipo)} — {fmtDataId(p.inicio)} a{" "}
+                  {fmtDataId(p.fim)}
+                  {p.observacao ? ` (${p.observacao})` : ""}
+                </span>
+                <button
+                  className="botao-apagar-nota"
+                  onClick={() => remover(p.id)}
+                >
+                  Remover
+                </button>
               </div>
             ))}
         </div>
       )}
     </div>
-  )
+  );
 }
 
 function RascunhoRapido({ user, dataAtualId, onTransferido }) {
-  const [aberto, setAberto] = useState(false)
-  const [turmasManha, setTurmasManha] = useState({})
-  const [turmasTarde, setTurmasTarde] = useState({})
-  const saveTimer = useRef(null)
-  const dataId = hojeId()
+  const [aberto, setAberto] = useState(false);
+  const [turmasManha, setTurmasManha] = useState({});
+  const [turmasTarde, setTurmasTarde] = useState({});
+  const saveTimer = useRef(null);
+  const dataId = hojeId();
 
   useEffect(() => {
-    if (!user) return
+    if (!user) return;
     const unsub = observarRascunho(user.uid, dataId, (data) => {
-      setTurmasManha((data && data.manha) || {})
-      setTurmasTarde((data && data.tarde) || {})
-    })
-    return unsub
-  }, [user, dataId])
+      setTurmasManha((data && data.manha) || {});
+      setTurmasTarde((data && data.tarde) || {});
+    });
+    return unsub;
+  }, [user, dataId]);
 
   function aoDigitar(turno, i, valor) {
-    const atualizado = turno === 'manha' ? { ...turmasManha, [i]: valor } : { ...turmasTarde, [i]: valor }
-    if (turno === 'manha') setTurmasManha(atualizado)
-    else setTurmasTarde(atualizado)
+    const atualizado =
+      turno === "manha"
+        ? { ...turmasManha, [i]: valor }
+        : { ...turmasTarde, [i]: valor };
+    if (turno === "manha") setTurmasManha(atualizado);
+    else setTurmasTarde(atualizado);
 
-    clearTimeout(saveTimer.current)
+    clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
       salvarRascunho(user.uid, dataId, {
-        manha: turno === 'manha' ? atualizado : turmasManha,
-        tarde: turno === 'tarde' ? atualizado : turmasTarde,
-      })
-    }, 400)
+        manha: turno === "manha" ? atualizado : turmasManha,
+        tarde: turno === "tarde" ? atualizado : turmasTarde,
+      });
+    }, 400);
   }
 
   function apagarRascunho() {
-    excluirRascunho(user.uid, dataId)
-    setTurmasManha({})
-    setTurmasTarde({})
+    excluirRascunho(user.uid, dataId);
+    setTurmasManha({});
+    setTurmasTarde({});
   }
 
   async function transferirParaOficial() {
-    const atual = await buscarDia(user.uid, dataId)
-    let novaManha = (atual && atual.manha) || makeEmptyRegistro(MANHA)
-    let novaTarde = (atual && atual.tarde) || makeEmptyRegistro(TARDE)
+    const atual = await buscarDia(user.uid, dataId);
+    let novaManha = (atual && atual.manha) || makeEmptyRegistro(MANHA);
+    let novaTarde = (atual && atual.tarde) || makeEmptyRegistro(TARDE);
 
     Object.entries(turmasManha).forEach(([i, valor]) => {
-      if (valor && valor.trim() !== '') {
-        novaManha = { ...novaManha, [i]: { ...novaManha[i], turma: valor } }
+      if (valor && valor.trim() !== "") {
+        novaManha = { ...novaManha, [i]: { ...novaManha[i], turma: valor } };
       }
-    })
+    });
     Object.entries(turmasTarde).forEach(([i, valor]) => {
-      if (valor && valor.trim() !== '') {
-        novaTarde = { ...novaTarde, [i]: { ...novaTarde[i], turma: valor } }
+      if (valor && valor.trim() !== "") {
+        novaTarde = { ...novaTarde, [i]: { ...novaTarde[i], turma: valor } };
       }
-    })
+    });
 
-    await salvarDia(user.uid, dataId, { manha: novaManha, tarde: novaTarde })
-    apagarRascunho()
-    setAberto(false)
-    if (dataAtualId === dataId && onTransferido) onTransferido()
+    await salvarDia(user.uid, dataId, { manha: novaManha, tarde: novaTarde });
+    apagarRascunho();
+    setAberto(false);
+    if (dataAtualId === dataId && onTransferido) onTransferido();
   }
 
-  const temAlgo = Object.values(turmasManha).some((v) => v && v.trim() !== '') ||
-    Object.values(turmasTarde).some((v) => v && v.trim() !== '')
+  const temAlgo =
+    Object.values(turmasManha).some((v) => v && v.trim() !== "") ||
+    Object.values(turmasTarde).some((v) => v && v.trim() !== "");
 
   if (!aberto) {
     return (
       <button className="botao-rascunho-abrir" onClick={() => setAberto(true)}>
-        ⚡ Anotação rápida do dia{temAlgo ? ' (tem rascunho salvo)' : ''}
+        ⚡ Anotação rápida do dia{temAlgo ? " (tem rascunho salvo)" : ""}
       </button>
-    )
+    );
   }
 
   return (
     <div className="rascunho-bloco">
       <div className="rascunho-cabecalho">
         <h3>⚡ Anotação rápida — hoje ({fmtDataId(dataId)})</h3>
-        <button className="botao-fechar-rascunho" onClick={() => setAberto(false)}>Fechar</button>
+        <button
+          className="botao-fechar-rascunho"
+          onClick={() => setAberto(false)}
+        >
+          Fechar
+        </button>
       </div>
-      <p className="rascunho-dica">Anote só a sala/turma que a administração informar. Depois clique em "Transferir" para preencher a tabela oficial de hoje.</p>
+      <p className="rascunho-dica">
+        Anote só a sala/turma que a administração informar. Depois clique em
+        "Transferir" para preencher a tabela oficial de hoje.
+      </p>
 
       <div className="rascunho-colunas">
         <div className="rascunho-coluna">
           <h4>Manhã</h4>
-          {MANHA.map((row, i) => row.intervalo ? null : (
-            <div key={i} className="rascunho-linha">
-              <span>{row.aula}</span>
-              <input
-                value={turmasManha[i] || ''}
-                placeholder="sala / turma"
-                onChange={(e) => aoDigitar('manha', i, e.target.value)}
-              />
-            </div>
-          ))}
+          {MANHA.map((row, i) =>
+            row.intervalo ? null : (
+              <div key={i} className="rascunho-linha">
+                <span>{row.aula}</span>
+                <input
+                  value={turmasManha[i] || ""}
+                  placeholder="sala / turma"
+                  onChange={(e) => aoDigitar("manha", i, e.target.value)}
+                />
+              </div>
+            ),
+          )}
         </div>
         <div className="rascunho-coluna">
           <h4>Tarde</h4>
-          {TARDE.map((row, i) => row.intervalo ? null : (
-            <div key={i} className="rascunho-linha">
-              <span>{row.aula}</span>
-              <input
-                value={turmasTarde[i] || ''}
-                placeholder="sala / turma"
-                onChange={(e) => aoDigitar('tarde', i, e.target.value)}
-              />
-            </div>
-          ))}
+          {TARDE.map((row, i) =>
+            row.intervalo ? null : (
+              <div key={i} className="rascunho-linha">
+                <span>{row.aula}</span>
+                <input
+                  value={turmasTarde[i] || ""}
+                  placeholder="sala / turma"
+                  onChange={(e) => aoDigitar("tarde", i, e.target.value)}
+                />
+              </div>
+            ),
+          )}
         </div>
       </div>
 
       <div className="rascunho-acoes">
-        <button className="botao-transferir" onClick={transferirParaOficial} disabled={!temAlgo}>
+        <button
+          className="botao-transferir"
+          onClick={transferirParaOficial}
+          disabled={!temAlgo}
+        >
           ✅ Transferir para a tabela oficial de hoje
         </button>
-        <button className="botao-apagar-rascunho" onClick={apagarRascunho} disabled={!temAlgo}>
+        <button
+          className="botao-apagar-rascunho"
+          onClick={apagarRascunho}
+          disabled={!temAlgo}
+        >
           🗑 Apagar rascunho
         </button>
       </div>
     </div>
-  )
+  );
 }
 
 function NotaWidget({ user }) {
-  const [nota, setNota] = useState(null)
-  const [texto, setTexto] = useState('')
-  const saveTimer = useRef(null)
+  const [aberto, setAberto] = useState(false);
+  const [nota, setNota] = useState(null);
+  const [texto, setTexto] = useState("");
+  const saveTimer = useRef(null);
 
   useEffect(() => {
-    if (!user) return
+    if (!user) return;
     const unsub = observarNota(user.uid, (data) => {
-      setNota(data)
-      if (data && !data.excluida) setTexto(data.texto || '')
-      if (!data) setTexto('')
-    })
-    return unsub
-  }, [user])
+      setNota(data);
+      if (data && !data.excluida) setTexto(data.texto || "");
+      if (!data) setTexto("");
+    });
+    return unsub;
+  }, [user]);
 
   useEffect(() => {
-    if (!nota || !nota.excluida || !nota.excluidaEm) return
-    const dias = (Date.now() - nota.excluidaEm) / (1000 * 60 * 60 * 24)
+    if (!nota || !nota.excluida || !nota.excluidaEm) return;
+    const dias = (Date.now() - nota.excluidaEm) / (1000 * 60 * 60 * 24);
     if (dias >= DIAS_LIXEIRA) {
-      excluirNotaDefinitivamente(user.uid)
+      excluirNotaDefinitivamente(user.uid);
     }
-  }, [nota, user])
+  }, [nota, user]);
 
   function aoDigitar(valor) {
-    setTexto(valor)
-    clearTimeout(saveTimer.current)
+    setTexto(valor);
+    clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      salvarNota(user.uid, valor)
-    }, 500)
+      salvarNota(user.uid, valor);
+    }, 500);
   }
 
   function apagar() {
-    moverNotaParaLixeira(user.uid, texto)
+    moverNotaParaLixeira(user.uid, texto);
   }
 
   function restaurar() {
-    restaurarNota(user.uid)
+    restaurarNota(user.uid);
   }
 
-  const naLixeira = nota && nota.excluida
-  const diasRestantes = (naLixeira && nota.excluidaEm)
-    ? Math.max(0, DIAS_LIXEIRA - Math.floor((Date.now() - nota.excluidaEm) / (1000 * 60 * 60 * 24)))
-    : null
+  const naLixeira = nota && nota.excluida;
+  const diasRestantes =
+    naLixeira && nota.excluidaEm
+      ? Math.max(
+          0,
+          DIAS_LIXEIRA -
+            Math.floor((Date.now() - nota.excluidaEm) / (1000 * 60 * 60 * 24)),
+        )
+      : null;
+
+  if (!aberto) {
+    return (
+      <button className="botao-periodos-abrir" onClick={() => setAberto(true)}>
+        📝 Bloco de notas
+        {texto && texto.trim() !== "" ? " (tem nota salva)" : ""}
+      </button>
+    );
+  }
 
   return (
     <div className="nota-bloco">
       <div className="nota-cabecalho">
         <h3>📝 Bloco de notas</h3>
-        {!naLixeira && <button className="botao-apagar-nota" onClick={apagar} disabled={!texto}>Apagar</button>}
+        <div className="nota-cabecalho-botoes">
+          {!naLixeira && (
+            <button
+              className="botao-apagar-nota"
+              onClick={apagar}
+              disabled={!texto}
+            >
+              Apagar
+            </button>
+          )}
+          <button
+            className="botao-fechar-rascunho"
+            onClick={() => setAberto(false)}
+          >
+            Fechar
+          </button>
+        </div>
       </div>
 
       {naLixeira ? (
         <div className="nota-lixeira">
-          <p>Nota apagada — fica na lixeira por mais <strong>{diasRestantes} dia(s)</strong> antes de excluir para sempre.</p>
-          <p className="nota-preview">{nota.texto?.slice(0, 120) || '(nota vazia)'}{nota.texto?.length > 120 ? '…' : ''}</p>
-          <button className="botao-restaurar" onClick={restaurar}>Restaurar nota</button>
+          <p>
+            Nota apagada — fica na lixeira por mais{" "}
+            <strong>{diasRestantes} dia(s)</strong> antes de excluir para
+            sempre.
+          </p>
+          <p className="nota-preview">
+            {nota.texto?.slice(0, 120) || "(nota vazia)"}
+            {nota.texto?.length > 120 ? "…" : ""}
+          </p>
+          <button className="botao-restaurar" onClick={restaurar}>
+            Restaurar nota
+          </button>
         </div>
       ) : (
         <textarea
@@ -557,7 +1074,7 @@ function NotaWidget({ user }) {
         />
       )}
     </div>
-  )
+  );
 }
 
 function TelaLogin() {
@@ -566,134 +1083,170 @@ function TelaLogin() {
       <div className="login-card">
         <h1>{ESCOLA}</h1>
         <p>{ENDERECO}</p>
-        <p className="subtitulo">Controle de Aulas — Professor Thiago Fernando</p>
-        <button className="botao-login" onClick={loginComGoogle}>Entrar com Google</button>
+        <p className="subtitulo">
+          Controle de Aulas — Professor Thiago Fernando
+        </p>
+        <button className="botao-login" onClick={loginComGoogle}>
+          Entrar com Google
+        </button>
       </div>
     </div>
-  )
+  );
 }
 
 export default function App() {
-  const [user, setUser] = useState(undefined)
-  const [dataAtualId, setDataAtualId] = useState(hojeId())
-  const [salvando, setSalvando] = useState(false)
-  const [manhaDados, setManhaDados] = useState(makeEmptyRegistro(MANHA))
-  const [tardeDados, setTardeDados] = useState(makeEmptyRegistro(TARDE))
-  const [temaEscuro, setTemaEscuro] = useState(() => localStorage.getItem('tema') === 'escuro')
-  const [periodos, setPeriodos] = useState([])
-  const [forcarEdicaoData, setForcarEdicaoData] = useState(null)
-  const [painelExportar, setPainelExportar] = useState(false)
-  const [periodoInicioExp, setPeriodoInicioExp] = useState(hojeId())
-  const [periodoFimExp, setPeriodoFimExp] = useState(hojeId())
-  const [exportando, setExportando] = useState(false)
-  const [totalSemana, setTotalSemana] = useState(null)
-  const saveTimer = useRef(null)
+  const [user, setUser] = useState(undefined);
+  const [dataAtualId, setDataAtualId] = useState(hojeId());
+  const [salvando, setSalvando] = useState(false);
+  const [manhaDados, setManhaDados] = useState(makeEmptyRegistro(MANHA));
+  const [tardeDados, setTardeDados] = useState(makeEmptyRegistro(TARDE));
+  const [temaEscuro, setTemaEscuro] = useState(
+    () => localStorage.getItem("tema") === "escuro",
+  );
+  const [periodos, setPeriodos] = useState([]);
+  const [forcarEdicaoData, setForcarEdicaoData] = useState(null);
+  const [painelExportar, setPainelExportar] = useState(false);
+  const [periodoInicioExp, setPeriodoInicioExp] = useState(hojeId());
+  const [periodoFimExp, setPeriodoFimExp] = useState(hojeId());
+  const [exportando, setExportando] = useState(false);
+  const [totalSemana, setTotalSemana] = useState(null);
+  const saveTimer = useRef(null);
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-tema', temaEscuro ? 'escuro' : 'claro')
-    localStorage.setItem('tema', temaEscuro ? 'escuro' : 'claro')
-  }, [temaEscuro])
+    document.documentElement.setAttribute(
+      "data-tema",
+      temaEscuro ? "escuro" : "claro",
+    );
+    localStorage.setItem("tema", temaEscuro ? "escuro" : "claro");
+  }, [temaEscuro]);
 
-  useEffect(() => observarLogin(setUser), [])
-
-  useEffect(() => {
-    if (!user) return
-    const unsub = observarPeriodos(user.uid, setPeriodos)
-    return unsub
-  }, [user])
+  useEffect(() => observarLogin(setUser), []);
 
   useEffect(() => {
-    if (!user) return
+    if (!user) return;
+    const unsub = observarPeriodos(user.uid, setPeriodos);
+    return unsub;
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
     const unsub = observarDia(user.uid, dataAtualId, (data) => {
-      setManhaDados((data && data.manha) || makeEmptyRegistro(MANHA))
-      setTardeDados((data && data.tarde) || makeEmptyRegistro(TARDE))
-    })
-    return unsub
-  }, [user, dataAtualId])
+      setManhaDados((data && data.manha) || makeEmptyRegistro(MANHA));
+      setTardeDados((data && data.tarde) || makeEmptyRegistro(TARDE));
+    });
+    return unsub;
+  }, [user, dataAtualId]);
 
   async function recalcularTotalSemana() {
-    if (!user) return
-    const { inicio, fim } = primeiroUltimoDiaSemana(dataAtualId)
-    let cursor = fromId(inicio)
-    const fimDate = fromId(fim)
-    let soma = 0
+    if (!user) return;
+    const { inicio, fim } = primeiroUltimoDiaSemana(dataAtualId);
+    let cursor = fromId(inicio);
+    const fimDate = fromId(fim);
+    let soma = 0;
     while (cursor <= fimDate) {
-      const id = toId(cursor)
-      const dados = await buscarDia(user.uid, id)
+      const id = toId(cursor);
+      const dados = await buscarDia(user.uid, id);
       if (dados) {
-        soma += Object.values(dados.manha || {}).filter((d) => d.turma && d.turma.trim() !== '').length
-        soma += Object.values(dados.tarde || {}).filter((d) => d.turma && d.turma.trim() !== '').length
+        soma += Object.values(dados.manha || {}).filter(
+          (d) => d.turma && d.turma.trim() !== "",
+        ).length;
+        soma += Object.values(dados.tarde || {}).filter(
+          (d) => d.turma && d.turma.trim() !== "",
+        ).length;
       }
-      cursor = addDias(cursor, 1)
+      cursor = addDias(cursor, 1);
     }
-    setTotalSemana(soma)
+    setTotalSemana(soma);
   }
 
   useEffect(() => {
-    recalcularTotalSemana()
-  }, [user, dataAtualId])
+    recalcularTotalSemana();
+  }, [user, dataAtualId]);
 
   function agendarSalvar(novaManha, novaTarde) {
-    if (!user) return
-    clearTimeout(saveTimer.current)
-    setSalvando(true)
+    if (!user) return;
+    clearTimeout(saveTimer.current);
+    setSalvando(true);
     saveTimer.current = setTimeout(async () => {
-      await salvarDia(user.uid, dataAtualId, { manha: novaManha, tarde: novaTarde })
-      setSalvando(false)
-      recalcularTotalSemana()
-    }, 600)
+      await salvarDia(user.uid, dataAtualId, {
+        manha: novaManha,
+        tarde: novaTarde,
+      });
+      setSalvando(false);
+      recalcularTotalSemana();
+    }, 600);
   }
 
   function atualizarManha(i, campo, valor) {
-    const novo = { ...manhaDados, [i]: { ...manhaDados[i], [campo]: valor } }
-    setManhaDados(novo)
-    agendarSalvar(novo, tardeDados)
+    const novo = { ...manhaDados, [i]: { ...manhaDados[i], [campo]: valor } };
+    setManhaDados(novo);
+    agendarSalvar(novo, tardeDados);
   }
 
   function atualizarTarde(i, campo, valor) {
-    const novo = { ...tardeDados, [i]: { ...tardeDados[i], [campo]: valor } }
-    setTardeDados(novo)
-    agendarSalvar(manhaDados, novo)
+    const novo = { ...tardeDados, [i]: { ...tardeDados[i], [campo]: valor } };
+    setTardeDados(novo);
+    agendarSalvar(manhaDados, novo);
   }
 
   const totalDia = useMemo(() => {
-    const m = Object.values(manhaDados).filter((d) => d.turma.trim() !== '').length
-    const t = Object.values(tardeDados).filter((d) => d.turma.trim() !== '').length
-    return m + t
-  }, [manhaDados, tardeDados])
+    const m = Object.values(manhaDados).filter(
+      (d) => d.turma.trim() !== "",
+    ).length;
+    const t = Object.values(tardeDados).filter(
+      (d) => d.turma.trim() !== "",
+    ).length;
+    return m + t;
+  }, [manhaDados, tardeDados]);
 
   function abrirPainelExportar() {
-    setPeriodoInicioExp(dataAtualId)
-    setPeriodoFimExp(dataAtualId)
-    setPainelExportar(true)
+    setPeriodoInicioExp(dataAtualId);
+    setPeriodoFimExp(dataAtualId);
+    setPainelExportar(true);
   }
 
   async function aoExportarMesAtual() {
-    setExportando(true)
-    const { inicio, fim } = primeiroUltimoDiaMes(dataAtualId)
-    await exportarIntervalo(user.uid, periodos, inicio, fim, dataAtualId, manhaDados, tardeDados)
-    setExportando(false)
+    setExportando(true);
+    const { inicio, fim } = primeiroUltimoDiaMes(dataAtualId);
+    await exportarIntervalo(
+      user.uid,
+      periodos,
+      inicio,
+      fim,
+      dataAtualId,
+      manhaDados,
+      tardeDados,
+    );
+    setExportando(false);
   }
 
   async function aoExportarPeriodo() {
-    setExportando(true)
-    await exportarIntervalo(user.uid, periodos, periodoInicioExp, periodoFimExp, dataAtualId, manhaDados, tardeDados)
-    setExportando(false)
-    setPainelExportar(false)
+    setExportando(true);
+    await exportarIntervalo(
+      user.uid,
+      periodos,
+      periodoInicioExp,
+      periodoFimExp,
+      dataAtualId,
+      manhaDados,
+      tardeDados,
+    );
+    setExportando(false);
+    setPainelExportar(false);
   }
 
   if (user === undefined) {
-    return <div className="carregando">Carregando…</div>
+    return <div className="carregando">Carregando…</div>;
   }
 
   if (user === null) {
-    return <TelaLogin />
+    return <TelaLogin />;
   }
 
-  const dataObj = fromId(dataAtualId)
-  const periodoAtivo = periodoQueCobre(periodos, dataAtualId)
-  const ehHoje = dataAtualId === hojeId()
-  const forcarEdicao = forcarEdicaoData === dataAtualId
+  const dataObj = fromId(dataAtualId);
+  const periodoAtivo = periodoQueCobre(periodos, dataAtualId);
+  const ehHoje = dataAtualId === hojeId();
+  const forcarEdicao = forcarEdicaoData === dataAtualId;
 
   return (
     <div className="app">
@@ -704,39 +1257,91 @@ export default function App() {
             <p>{ENDERECO}</p>
             <p className="professor">Professor: Thiago Fernando</p>
           </div>
-          <button className="botao-sair" onClick={logout}>Sair</button>
-          <button className="botao-tema" onClick={() => setTemaEscuro(!temaEscuro)}>
-            {temaEscuro ? '☀️ Claro' : '🌙 Escuro'}
+          <button className="botao-sair" onClick={logout}>
+            Sair
+          </button>
+          <button
+            className="botao-tema"
+            onClick={() => setTemaEscuro(!temaEscuro)}
+          >
+            {temaEscuro ? "☀️ Claro" : "🌙 Escuro"}
           </button>
         </div>
       </header>
 
+      <div className="acessos-rapidos">
+        <a
+          className="botao-acesso-rapido"
+          href="https://saladofuturo.educacao.sp.gov.br/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          🚀 Sala do Futuro
+        </a>
+        <a
+          className="botao-acesso-rapido"
+          href="https://sed.educacao.sp.gov.br/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          🗂️ SED
+        </a>
+      </div>
+
       <div className="nav-dia">
-        <button onClick={() => setDataAtualId(diaAnteriorUtil(dataAtualId))}>← Dia anterior</button>
+        <button onClick={() => setDataAtualId(diaAnteriorUtil(dataAtualId))}>
+          ← Dia anterior
+        </button>
         <div className="nav-dia-central">
           <input
             type="date"
+            className={totalDia > 0 ? "data-preenchida" : ""}
             value={dataAtualId}
             onChange={(e) => setDataAtualId(e.target.value)}
           />
           <span className="nav-dia-nome">{nomeDiaSemana(dataObj)}</span>
-          {!ehHoje && <button className="botao-ir-hoje" onClick={() => setDataAtualId(hojeId())}>Ir para hoje</button>}
+          {!ehHoje && (
+            <button
+              className="botao-ir-hoje"
+              onClick={() => setDataAtualId(hojeId())}
+            >
+              Ir para hoje
+            </button>
+          )}
         </div>
-        <button onClick={() => setDataAtualId(diaProximoUtil(dataAtualId))}>Próximo dia →</button>
+        <button onClick={() => setDataAtualId(diaProximoUtil(dataAtualId))}>
+          Próximo dia →
+        </button>
       </div>
 
-      <RascunhoRapido user={user} dataAtualId={dataAtualId} onTransferido={() => {}} />
+      <RascunhoRapido
+        user={user}
+        dataAtualId={dataAtualId}
+        onTransferido={() => {}}
+      />
+
+      <ResumoTotais user={user} periodos={periodos} />
 
       <PainelPeriodos user={user} periodos={periodos} />
 
       <NotaWidget user={user} />
 
       <div className="acoes">
-        <span className="status-salvando">{salvando ? 'Salvando…' : 'Salvo ✓'}</span>
-        <button className="botao-exportar" onClick={aoExportarMesAtual} disabled={exportando}>
+        <span className="status-salvando">
+          {salvando ? "Salvando…" : "Salvo ✓"}
+        </span>
+        <button
+          className="botao-exportar"
+          onClick={aoExportarMesAtual}
+          disabled={exportando}
+        >
           ⬇ Exportar {nomeMesAno(dataAtualId)}
         </button>
-        <button className="botao-periodo" onClick={abrirPainelExportar} disabled={exportando}>
+        <button
+          className="botao-periodo"
+          onClick={abrirPainelExportar}
+          disabled={exportando}
+        >
           📅 Escolher período
         </button>
         <button className="botao-imprimir" onClick={() => window.print()}>
@@ -750,18 +1355,35 @@ export default function App() {
           <div className="painel-exportar-linha">
             <label>
               De:
-              <input type="date" value={periodoInicioExp} onChange={(e) => setPeriodoInicioExp(e.target.value)} />
+              <input
+                type="date"
+                value={periodoInicioExp}
+                onChange={(e) => setPeriodoInicioExp(e.target.value)}
+              />
             </label>
             <label>
               Até:
-              <input type="date" value={periodoFimExp} onChange={(e) => setPeriodoFimExp(e.target.value)} />
+              <input
+                type="date"
+                value={periodoFimExp}
+                onChange={(e) => setPeriodoFimExp(e.target.value)}
+              />
             </label>
           </div>
           <div className="painel-exportar-acoes">
-            <button className="botao-exportar" onClick={aoExportarPeriodo} disabled={exportando}>
-              {exportando ? 'Gerando…' : '⬇ Gerar arquivo deste período'}
+            <button
+              className="botao-exportar"
+              onClick={aoExportarPeriodo}
+              disabled={exportando}
+            >
+              {exportando ? "Gerando…" : "⬇ Gerar arquivo deste período"}
             </button>
-            <button className="botao-cancelar" onClick={() => setPainelExportar(false)}>Cancelar</button>
+            <button
+              className="botao-cancelar"
+              onClick={() => setPainelExportar(false)}
+            >
+              Cancelar
+            </button>
           </div>
         </div>
       )}
@@ -769,21 +1391,51 @@ export default function App() {
       {periodoAtivo && !forcarEdicao ? (
         <div className="aviso-periodo">
           <h3>{rotuloTipoPeriodo(periodoAtivo.tipo)}</h3>
-          <p>Período de {fmtDataId(periodoAtivo.inicio)} a {fmtDataId(periodoAtivo.fim)}</p>
-          {periodoAtivo.observacao && <p className="aviso-periodo-obs">{periodoAtivo.observacao}</p>}
-          <p className="aviso-periodo-legenda">Este dia está marcado como sem aula. Se precisar registrar uma aula mesmo assim, clique abaixo.</p>
-          <button className="botao-cancelar" onClick={() => setForcarEdicaoData(dataAtualId)}>Registrar aula mesmo assim</button>
+          <p>
+            Período de {fmtDataId(periodoAtivo.inicio)} a{" "}
+            {fmtDataId(periodoAtivo.fim)}
+          </p>
+          {periodoAtivo.observacao && (
+            <p className="aviso-periodo-obs">{periodoAtivo.observacao}</p>
+          )}
+          <p className="aviso-periodo-legenda">
+            Este dia está marcado como sem aula. Se precisar registrar uma aula
+            mesmo assim, clique abaixo.
+          </p>
+          <button
+            className="botao-cancelar"
+            onClick={() => setForcarEdicaoData(dataAtualId)}
+          >
+            Registrar aula mesmo assim
+          </button>
         </div>
       ) : (
         <>
-          <Tabela titulo="Turno Manhã" rows={MANHA} dados={manhaDados} onChange={atualizarManha} />
-          <Tabela titulo="Turno Tarde" rows={TARDE} dados={tardeDados} onChange={atualizarTarde} />
+          <Tabela
+            titulo="Turno Manhã"
+            rows={MANHA}
+            dados={manhaDados}
+            onChange={atualizarManha}
+            totalSemana={totalSemana}
+          />
+          <Tabela
+            titulo="Turno Tarde"
+            rows={TARDE}
+            dados={tardeDados}
+            onChange={atualizarTarde}
+            totalSemana={totalSemana}
+          />
           <div className="total-geral">
-            <div>Total de aulas no dia: <strong>{totalDia}</strong></div>
-            <div className="total-semana">Total de aulas nesta semana (Seg a Sex): <strong>{totalSemana === null ? '…' : totalSemana}</strong></div>
+            <div>
+              Total de aulas no dia: <strong>{totalDia}</strong>
+            </div>
+            <div className="total-semana">
+              Total de aulas nesta semana (Seg a Sex):{" "}
+              <strong>{totalSemana === null ? "…" : totalSemana}</strong>
+            </div>
           </div>
         </>
       )}
     </div>
-  )
+  );
 }

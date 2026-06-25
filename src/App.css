@@ -1,5 +1,7 @@
 * { box-sizing: border-box; }
 
+input[type="date"] { color-scheme: light; }
+
 .app {
   max-width: 1000px;
   margin: 0 auto;
@@ -387,6 +389,14 @@ td input { color: var(--text); }
   color: var(--text-muted);
   gap: 4px;
 }
+.painel-exportar-linha input[type="date"] {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: #ffffff;
+  color: #1f2430;
+  color-scheme: light;
+}
 .painel-exportar-linha select {
   padding: 6px 8px;
   border-radius: 6px;
@@ -560,6 +570,8 @@ td input { color: var(--text); }
   padding: 6px 8px;
   font-weight: bold;
   color: #2F5496;
+  background: #ffffff;
+  color-scheme: light;
 }
 .nav-dia-nome { font-weight: bold; font-size: 13px; }
 .botao-ir-hoje {
@@ -567,6 +579,14 @@ td input { color: var(--text); }
   color: #6b4e00 !important;
   font-size: 12px !important;
   padding: 4px 10px !important;
+}
+
+/* Caixinha de data fica vermelha (igual linha-dada) quando o dia já tem aula registrada */
+.nav-dia-central input[type="date"].data-preenchida {
+  background: #FF9999 !important;
+  color: #660000 !important;
+  font-weight: bold;
+  color-scheme: light;
 }
 
 /* ===== Painel de periodos especiais ===== */
@@ -681,4 +701,268 @@ td input { color: var(--text); }
   font-size: 14px;
   margin-top: 6px;
   opacity: 0.85;
+}
+
+/* ===== Seletor de Turma (com fallback para dados antigos) ===== */
+.seletor-turma {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.seletor-turma-linha {
+  display: flex;
+  gap: 4px;
+}
+
+.turma-original-aviso {
+  font-size: 0.75rem;
+  color: #b45309;
+  white-space: nowrap;
+}
+
+.total-semana-rodape {
+  margin-left: 8px;
+  color: #475569;
+}
+
+/* ===== Resumo semanal (qualquer semana, sob demanda) ===== */
+.botao-resumo-abrir {
+  display: block;
+  width: 100%;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--azul);
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-weight: bold;
+  font-size: 14px;
+  cursor: pointer;
+  margin-bottom: 16px;
+  text-align: left;
+}
+.botao-resumo-abrir:hover { opacity: 0.85; }
+
+.painel-resumo-semanal {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.resumo-semanal-data {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 10px 0 14px;
+  max-width: 260px;
+}
+.resumo-semanal-data input {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.resumo-data-cascata {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0 14px;
+  flex-wrap: wrap;
+}
+.resumo-data-cascata label {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  color: var(--text-muted);
+  gap: 4px;
+}
+.resumo-data-cascata select {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+}
+.resumo-aviso-periodo {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: -4px 0 10px;
+  font-style: italic;
+}
+
+.resumo-semanal-total {
+  font-size: 16px;
+  color: var(--azul);
+  margin-bottom: 10px;
+}
+
+.resumo-totais-grid {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.resumo-total-card {
+  flex: 1;
+  min-width: 180px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  text-align: center;
+}
+.resumo-total-card span {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  text-transform: capitalize;
+}
+.resumo-total-card strong {
+  font-size: 28px;
+  color: var(--azul);
+}
+
+.nota-cabecalho-botoes {
+  display: flex;
+  gap: 8px;
+}
+
+.botao-ver-detalhe {
+  display: block;
+  width: 100%;
+  background: none;
+  border: 1px dashed var(--border);
+  color: var(--azul);
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  margin-top: 12px;
+}
+.botao-ver-detalhe:hover { background: var(--azul-claro); }
+
+.resumo-semanal-dias {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+}
+.resumo-semanal-dia {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-size: 13px;
+}
+.resumo-semanal-dia.tem-aula {
+  background: #FFE5E5;
+  border-color: #FF9999;
+  font-weight: bold;
+  color: #660000;
+}
+[data-tema="escuro"] .resumo-semanal-dia.tem-aula {
+  background: #4a2020;
+  border-color: #7a3a3a;
+  color: #ffb3b3;
+}
+
+/* ===== Responsividade para celular/tablet ===== */
+.tabela-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 720px) {
+  .app { padding: 16px 10px 50px; }
+
+  .cabecalho h1 { font-size: 18px; }
+  .cabecalho p { font-size: 12px; }
+
+  .cabecalho-topo {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    text-align: center;
+  }
+  .cabecalho-topo > div:first-child { order: 1; }
+  .botao-sair, .botao-tema {
+    margin-left: 0;
+  }
+
+  .nav-dia {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .nav-dia button { width: 100%; }
+  .nav-dia-central { order: -1; }
+
+  .acoes {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .acoes .status-salvando { margin-right: 0; text-align: center; }
+  .botao-exportar, .botao-periodo, .botao-imprimir {
+    width: 100%;
+  }
+
+  .painel-exportar-linha { flex-direction: column; gap: 10px; }
+  .painel-exportar-acoes { flex-direction: column; }
+  .painel-exportar-acoes button { width: 100%; }
+
+  table { font-size: 12px; }
+  th, td { padding: 4px 5px; }
+  .seletor-turma-linha select { font-size: 12px; padding: 4px; }
+  td input { font-size: 12px; }
+
+  .rascunho-colunas { flex-direction: column; gap: 14px; }
+
+  .periodo-form { flex-direction: column; align-items: stretch; }
+  .periodo-form-obs { min-width: 0; }
+  .periodo-item { flex-direction: column; align-items: flex-start; }
+
+  .resumo-data-cascata { flex-direction: column; }
+  .resumo-data-cascata select { width: 100%; }
+  .resumo-totais-grid { flex-direction: column; }
+
+  .total-geral { font-size: 15px; }
+}
+
+/* ===== Acessos rapidos (Sala do Futuro / SED) ===== */
+.acessos-rapidos {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.botao-acesso-rapido {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--azul-claro);
+  color: var(--azul);
+  border: 1px solid var(--azul);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: bold;
+  text-decoration: none;
+  transition: background .15s, transform .1s;
+}
+.botao-acesso-rapido:hover {
+  background: var(--azul);
+  color: white;
+}
+@media (max-width: 720px) {
+  .acessos-rapidos { flex-direction: column; }
+  .botao-acesso-rapido { justify-content: center; width: 100%; }
 }
