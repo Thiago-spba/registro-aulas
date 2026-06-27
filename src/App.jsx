@@ -416,13 +416,76 @@ function SeletorTurma({ valor, onChange }) {
         </select>
       </div>
       {naoReconhecido && (
-        <span
-          className="turma-original-aviso"
-          title="Este dado antigo não foi reconhecido pelo formato atual. Nada foi perdido — o texto original continua salvo. Selecione Ano/Turma acima para corrigir, se quiser."
-        >
-          ⚠️ valor salvo: "{valor}"
-        </span>
+        <div className="turma-original-aviso-bloco">
+          <span
+            className="turma-original-aviso"
+            title="Este dado antigo não foi reconhecido pelo formato atual. Nada foi perdido — o texto original continua salvo. Selecione Ano/Turma acima para corrigir, ou apague abaixo."
+          >
+            ⚠️ valor salvo: "{valor}"
+          </span>
+          <button
+            type="button"
+            className="botao-apagar-turma-antiga"
+            onClick={() => onChange("")}
+            title="Apagar este valor antigo"
+          >
+            🗑 Apagar
+          </button>
+        </div>
       )}
+    </div>
+  );
+}
+
+function NavDia({ dataAtualId, setDataAtualId, totalDia }) {
+  const dataObj = fromId(dataAtualId);
+  const ehHoje = dataAtualId === hojeId();
+  return (
+    <div className="nav-dia nav-dia-interna">
+      <button onClick={() => setDataAtualId(diaAnteriorUtil(dataAtualId))}>
+        ← Dia anterior
+      </button>
+      <div className="nav-dia-central">
+        <input
+          type="date"
+          className={totalDia > 0 ? "data-preenchida" : ""}
+          value={dataAtualId}
+          onChange={(e) => setDataAtualId(e.target.value)}
+        />
+        <span className="nav-dia-nome">{nomeDiaSemana(dataObj)}</span>
+        {!ehHoje && (
+          <button
+            className="botao-ir-hoje"
+            onClick={() => setDataAtualId(hojeId())}
+          >
+            Ir para hoje
+          </button>
+        )}
+      </div>
+      <button onClick={() => setDataAtualId(diaProximoUtil(dataAtualId))}>
+        Próximo dia →
+      </button>
+    </div>
+  );
+}
+
+function AbaColapsavel({ titulo, badge, abaPlaceholder, children }) {
+  const [aberta, setAberta] = useState(false);
+  return (
+    <div
+      className={`aba-colapsavel ${abaPlaceholder ? "aba-placeholder" : ""}`}
+    >
+      <button
+        className="aba-colapsavel-cabecalho"
+        onClick={() => setAberta(!aberta)}
+      >
+        <span>
+          {titulo}
+          {badge ? ` ${badge}` : ""}
+        </span>
+        <span className="aba-colapsavel-seta">{aberta ? "▲" : "▼"}</span>
+      </button>
+      {aberta && <div className="aba-colapsavel-conteudo">{children}</div>}
     </div>
   );
 }
@@ -584,7 +647,7 @@ function ResumoTotais({ user, periodos }) {
   if (!aberto) {
     return (
       <button className="botao-resumo-abrir" onClick={() => setAberto(true)}>
-        📊 Ver total de aulas (semana / mês)
+        📊 Totais
       </button>
     );
   }
@@ -737,8 +800,8 @@ function PainelPeriodos({ user, periodos }) {
   if (!aberto) {
     return (
       <button className="botao-periodos-abrir" onClick={() => setAberto(true)}>
-        📅 Gerenciar períodos especiais (férias, feriado, atestado)
-        {periodos.length > 0 ? ` — ${periodos.length} cadastrado(s)` : ""}
+        📅 Períodos
+        {periodos.length > 0 ? ` (${periodos.length})` : ""}
       </button>
     );
   }
@@ -1021,8 +1084,8 @@ function NotaWidget({ user }) {
   if (!aberto) {
     return (
       <button className="botao-periodos-abrir" onClick={() => setAberto(true)}>
-        📝 Bloco de notas
-        {texto && texto.trim() !== "" ? " (tem nota salva)" : ""}
+        📝 Notas
+        {texto && texto.trim() !== "" ? " •" : ""}
       </button>
     );
   }
@@ -1411,20 +1474,49 @@ export default function App() {
         </div>
       ) : (
         <>
-          <Tabela
-            titulo="Turno Manhã"
-            rows={MANHA}
-            dados={manhaDados}
-            onChange={atualizarManha}
-            totalSemana={totalSemana}
-          />
-          <Tabela
-            titulo="Turno Tarde"
-            rows={TARDE}
-            dados={tardeDados}
-            onChange={atualizarTarde}
-            totalSemana={totalSemana}
-          />
+          <AbaColapsavel
+            titulo="🌅 Turno Manhã"
+            badge={`(${Object.values(manhaDados).filter((d) => d.turma.trim() !== "").length} aulas)`}
+          >
+            <NavDia
+              dataAtualId={dataAtualId}
+              setDataAtualId={setDataAtualId}
+              totalDia={totalDia}
+            />
+            <Tabela
+              titulo="Turno Manhã"
+              rows={MANHA}
+              dados={manhaDados}
+              onChange={atualizarManha}
+              totalSemana={totalSemana}
+            />
+          </AbaColapsavel>
+
+          <AbaColapsavel
+            titulo="🌇 Turno Tarde"
+            badge={`(${Object.values(tardeDados).filter((d) => d.turma.trim() !== "").length} aulas)`}
+          >
+            <NavDia
+              dataAtualId={dataAtualId}
+              setDataAtualId={setDataAtualId}
+              totalDia={totalDia}
+            />
+            <Tabela
+              titulo="Turno Tarde"
+              rows={TARDE}
+              dados={tardeDados}
+              onChange={atualizarTarde}
+              totalSemana={totalSemana}
+            />
+          </AbaColapsavel>
+
+          <AbaColapsavel titulo="🛠️ Ensino Técnico" abaPlaceholder={true}>
+            <p className="aba-placeholder-texto">
+              Em construção — essa aba vai ter uma estrutura própria, separada
+              da contagem de Manhã/Tarde.
+            </p>
+          </AbaColapsavel>
+
           <div className="total-geral">
             <div>
               Total de aulas no dia: <strong>{totalDia}</strong>

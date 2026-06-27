@@ -966,3 +966,73 @@ td input { color: var(--text); }
   .acessos-rapidos { flex-direction: column; }
   .botao-acesso-rapido { justify-content: center; width: 100%; }
 }
+.turma-original-aviso-bloco {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.botao-apagar-turma-antiga {
+  font-size: 0.75rem;
+  background: #b45309;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.botao-apagar-turma-antiga:hover {
+  background: #92400e;
+}
+
+.aba-colapsavel {
+  margin-bottom: 12px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #d1d5db;
+}
+
+.aba-colapsavel-cabecalho {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: #1e3a8a;
+  color: #fff;
+  border: none;
+  font-weight: bold;
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.aba-colapsavel-cabecalho:hover {
+  background: #1e40af;
+}
+
+.aba-colapsavel-seta {
+  font-size: 0.8rem;
+}
+
+.aba-colapsavel-conteudo {
+  padding: 10px;
+}
+
+.aba-placeholder .aba-colapsavel-cabecalho {
+  background: #6b7280;
+}
+
+.aba-placeholder-texto {
+  text-align: center;
+  color: #6b7280;
+  padding: 20px;
+  font-style: italic;
+}
+
+.nav-dia-interna {
+  margin-bottom: 10px;
+}
