@@ -118,3 +118,55 @@ export function observarRascunho(uid, dataId, callback) {
 export function excluirRascunho(uid, dataId) {
   return deleteDoc(doc(db, "usuarios", uid, "rascunhos", dataId));
 }
+
+// --- Ensino Tecnico: configuracao fixa por dia da semana + registro diario de conteudo ---
+export function salvarTecnicoConfig(uid, diaSemana, config) {
+  return setDoc(doc(db, "usuarios", uid, "tecnico_config", diaSemana), config, { merge: true });
+}
+export function observarTecnicoConfig(uid, callback) {
+  return onSnapshot(collection(db, "usuarios", uid, "tecnico_config"), (snap) => {
+    const config = {};
+    snap.docs.forEach((d) => {
+      config[d.id] = d.data();
+    });
+    callback(config);
+  });
+}
+export function salvarTecnicoDia(uid, dataId, dados) {
+  return setDoc(doc(db, "usuarios", uid, "tecnico_dias", dataId), dados, { merge: true });
+}
+export function observarTecnicoDia(uid, dataId, callback) {
+  return onSnapshot(doc(db, "usuarios", uid, "tecnico_dias", dataId), (snap) => {
+    callback(snap.exists() ? snap.data() : null);
+  });
+}
+export async function buscarTecnicoDia(uid, dataId) {
+  const snap = await getDoc(doc(db, "usuarios", uid, "tecnico_dias", dataId));
+  return snap.exists() ? snap.data() : null;
+}
+
+// --- Notas por dia (substitui a nota unica antiga) ---
+export function salvarNotaDia(uid, dataId, texto) {
+  return setDoc(doc(db, "usuarios", uid, "notas_dias", dataId), {
+    texto,
+    atualizadoEm: Date.now(),
+  }, { merge: true });
+}
+export function observarNotaDia(uid, dataId, callback) {
+  return onSnapshot(doc(db, "usuarios", uid, "notas_dias", dataId), (snap) => {
+    callback(snap.exists() ? snap.data() : null);
+  });
+}
+export function excluirNotaDia(uid, dataId) {
+  return deleteDoc(doc(db, "usuarios", uid, "notas_dias", dataId));
+}
+export function observarTodasNotas(uid, callback) {
+  return onSnapshot(collection(db, "usuarios", uid, "notas_dias"), (snap) => {
+    const mapa = {};
+    snap.docs.forEach((d) => {
+      const data = d.data();
+      if (data.texto && data.texto.trim() !== "") mapa[d.id] = true;
+    });
+    callback(mapa);
+  });
+}

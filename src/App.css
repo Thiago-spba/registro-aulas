@@ -1036,3 +1036,119 @@ td input { color: var(--text); }
 .nav-dia-interna {
   margin-bottom: 10px;
 }
+
+.tecnico-bloco h4 {
+  margin-bottom: 8px;
+}
+
+.input-horario-tecnico {
+  width: 70px;
+}
+
+.tecnico-bloco .total {
+  margin-top: 10px;
+}
+
+.calendario-notas {
+  margin: 10px 0;
+  padding: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+}
+
+.calendario-notas-cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.calendario-notas-cabecalho button {
+  background: #1e3a8a;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 2px 10px;
+  cursor: pointer;
+}
+
+.calendario-notas-dias-semana,
+.calendario-notas-grade {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  text-align: center;
+}
+
+.calendario-notas-dias-semana span {
+  font-weight: bold;
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.calendario-notas-dia {
+  padding: 6px 0;
+  border: none;
+  border-radius: 4px;
+  background: #e5e7eb;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.calendario-notas-dia:hover {
+  background: #cbd5e1;
+}
+
+.calendario-notas-dia.tem-nota {
+  background: #fde047;
+  font-weight: bold;
+}
+
+.calendario-notas-dia.selecionado {
+  outline: 2px solid #1e3a8a;
+}
+
+.calendario-notas-vazio {
+  visibility: hidden;
+}
+
+/* Correcao de contraste do calendario de notas (claro e escuro) */
+.calendario-notas-dia {
+  color: #1c1c1c;
+  background: #d1d5db;
+}
+
+[data-tema="escuro"] .calendario-notas-dia {
+  background: #2e3346;
+  color: #e8eaf0;
+}
+
+.calendario-notas-dia.tem-nota {
+  background: #fde047;
+  color: #1c1c1c;
+  font-weight: bold;
+}
+
+[data-tema="escuro"] .calendario-notas-dia.tem-nota {
+  background: #5c4a1a;
+  color: #ffd97a;
+}
+
+.calendario-notas-cabecalho strong {
+  color: var(--text);
+}
+
+/* Responsivo para telas pequenas */
+@media (max-width: 480px) {
+  .calendario-notas-dia {
+    padding: 4px 0;
+    font-size: 0.75rem;
+  }
+  .calendario-notas-cabecalho strong {
+    font-size: 0.85rem;
+  }
+  .calendario-notas-dias-semana span {
+    font-size: 0.65rem;
+  }
+}
+

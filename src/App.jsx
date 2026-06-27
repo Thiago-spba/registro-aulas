@@ -10,17 +10,19 @@ import {
   salvarPeriodo,
   observarPeriodos,
   excluirPeriodo,
-  salvarNota,
-  moverNotaParaLixeira,
-  restaurarNota,
-  excluirNotaDefinitivamente,
-  observarNota,
+  salvarNotaDia,
+  observarNotaDia,
+  excluirNotaDia,
+  observarTodasNotas,
   salvarRascunho,
   observarRascunho,
   excluirRascunho,
+  salvarTecnicoConfig,
+  observarTecnicoConfig,
+  salvarTecnicoDia,
+  observarTecnicoDia,
+  buscarTecnicoDia,
 } from "./firebase";
-
-const DIAS_LIXEIRA = 15;
 
 const ESCOLA = "E.E. Prof. Simão Mathias";
 const ENDERECO =
@@ -1031,61 +1033,124 @@ function RascunhoRapido({ user, dataAtualId, onTransferido }) {
   );
 }
 
-function NotaWidget({ user }) {
+function CalendarioNotas({
+  anoSel,
+  mesSel,
+  diasComNota,
+  dataSelecionada,
+  onSelecionarDia,
+  onMudarMes,
+}) {
+  const primeiroDiaSemana = new Date(anoSel, mesSel - 1, 1).getDay();
+  const totalDias = diasNoMes(anoSel, mesSel);
+  const celulas = [];
+  for (let i = 0; i < primeiroDiaSemana; i++) celulas.push(null);
+  for (let d = 1; d <= totalDias; d++) celulas.push(d);
+  const nomeMes = MESES_NOMES[mesSel - 1];
+
+  return (
+    <div className="calendario-notas">
+      <div className="calendario-notas-cabecalho">
+        <button onClick={() => onMudarMes(-1)}>←</button>
+        <strong>
+          {nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1)} de {anoSel}
+        </strong>
+        <button onClick={() => onMudarMes(1)}>→</button>
+      </div>
+      <div className="calendario-notas-dias-semana">
+        {["D", "S", "T", "Q", "Q", "S", "S"].map((d, i) => (
+          <span key={i}>{d}</span>
+        ))}
+      </div>
+      <div className="calendario-notas-grade">
+        {celulas.map((d, i) => {
+          if (d === null) {
+            return <span key={i} className="calendario-notas-vazio"></span>;
+          }
+          const id = `${anoSel}-${pad(mesSel)}-${pad(d)}`;
+          const temNota = !!diasComNota[id];
+          const selecionado = id === dataSelecionada;
+          return (
+            <button
+              key={i}
+              className={`calendario-notas-dia ${temNota ? "tem-nota" : ""} ${
+                selecionado ? "selecionado" : ""
+              }`}
+              onClick={() => onSelecionarDia(id)}
+              title={temNota ? "Tem anotação neste dia" : ""}
+            >
+              {d}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function NotaWidget({ user, dataAtualId, setDataAtualId }) {
   const [aberto, setAberto] = useState(false);
-  const [nota, setNota] = useState(null);
   const [texto, setTexto] = useState("");
+  const [diasComNota, setDiasComNota] = useState({});
+  const [mostrarCalendario, setMostrarCalendario] = useState(false);
   const saveTimer = useRef(null);
+
+  const dataObjAtual = fromId(dataAtualId);
+  const [anoCal, setAnoCal] = useState(dataObjAtual.getFullYear());
+  const [mesCal, setMesCal] = useState(dataObjAtual.getMonth() + 1);
+
+  useEffect(() => {
+    const d = fromId(dataAtualId);
+    setAnoCal(d.getFullYear());
+    setMesCal(d.getMonth() + 1);
+  }, [dataAtualId]);
 
   useEffect(() => {
     if (!user) return;
-    const unsub = observarNota(user.uid, (data) => {
-      setNota(data);
-      if (data && !data.excluida) setTexto(data.texto || "");
-      if (!data) setTexto("");
+    const unsub = observarNotaDia(user.uid, dataAtualId, (data) => {
+      setTexto((data && data.texto) || "");
     });
     return unsub;
-  }, [user]);
+  }, [user, dataAtualId]);
 
   useEffect(() => {
-    if (!nota || !nota.excluida || !nota.excluidaEm) return;
-    const dias = (Date.now() - nota.excluidaEm) / (1000 * 60 * 60 * 24);
-    if (dias >= DIAS_LIXEIRA) {
-      excluirNotaDefinitivamente(user.uid);
-    }
-  }, [nota, user]);
+    if (!user) return;
+    const unsub = observarTodasNotas(user.uid, setDiasComNota);
+    return unsub;
+  }, [user]);
 
   function aoDigitar(valor) {
     setTexto(valor);
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      salvarNota(user.uid, valor);
+      if (valor.trim() === "") {
+        excluirNotaDia(user.uid, dataAtualId);
+      } else {
+        salvarNotaDia(user.uid, dataAtualId, valor);
+      }
     }, 500);
   }
 
-  function apagar() {
-    moverNotaParaLixeira(user.uid, texto);
+  function mudarMes(delta) {
+    let novoMes = mesCal + delta;
+    let novoAno = anoCal;
+    if (novoMes > 12) {
+      novoMes = 1;
+      novoAno += 1;
+    }
+    if (novoMes < 1) {
+      novoMes = 12;
+      novoAno -= 1;
+    }
+    setMesCal(novoMes);
+    setAnoCal(novoAno);
   }
-
-  function restaurar() {
-    restaurarNota(user.uid);
-  }
-
-  const naLixeira = nota && nota.excluida;
-  const diasRestantes =
-    naLixeira && nota.excluidaEm
-      ? Math.max(
-          0,
-          DIAS_LIXEIRA -
-            Math.floor((Date.now() - nota.excluidaEm) / (1000 * 60 * 60 * 24)),
-        )
-      : null;
 
   if (!aberto) {
     return (
       <button className="botao-periodos-abrir" onClick={() => setAberto(true)}>
         📝 Notas
-        {texto && texto.trim() !== "" ? " •" : ""}
+        {diasComNota[dataAtualId] ? " •" : ""}
       </button>
     );
   }
@@ -1093,17 +1158,14 @@ function NotaWidget({ user }) {
   return (
     <div className="nota-bloco">
       <div className="nota-cabecalho">
-        <h3>📝 Bloco de notas</h3>
+        <h3>📝 Nota — {fmtDataId(dataAtualId)}</h3>
         <div className="nota-cabecalho-botoes">
-          {!naLixeira && (
-            <button
-              className="botao-apagar-nota"
-              onClick={apagar}
-              disabled={!texto}
-            >
-              Apagar
-            </button>
-          )}
+          <button
+            className="botao-ver-detalhe"
+            onClick={() => setMostrarCalendario(!mostrarCalendario)}
+          >
+            {mostrarCalendario ? "▲ Esconder calendário" : "🗓 Calendário"}
+          </button>
           <button
             className="botao-fechar-rascunho"
             onClick={() => setAberto(false)}
@@ -1113,29 +1175,275 @@ function NotaWidget({ user }) {
         </div>
       </div>
 
-      {naLixeira ? (
-        <div className="nota-lixeira">
-          <p>
-            Nota apagada — fica na lixeira por mais{" "}
-            <strong>{diasRestantes} dia(s)</strong> antes de excluir para
-            sempre.
-          </p>
-          <p className="nota-preview">
-            {nota.texto?.slice(0, 120) || "(nota vazia)"}
-            {nota.texto?.length > 120 ? "…" : ""}
-          </p>
-          <button className="botao-restaurar" onClick={restaurar}>
-            Restaurar nota
-          </button>
-        </div>
-      ) : (
-        <textarea
-          className="nota-texto"
-          placeholder="Anote aqui qualquer coisa — salva automaticamente…"
-          value={texto}
-          onChange={(e) => aoDigitar(e.target.value)}
+      {mostrarCalendario && (
+        <CalendarioNotas
+          anoSel={anoCal}
+          mesSel={mesCal}
+          diasComNota={diasComNota}
+          dataSelecionada={dataAtualId}
+          onSelecionarDia={(id) => setDataAtualId(id)}
+          onMudarMes={mudarMes}
         />
       )}
+
+      <textarea
+        className="nota-texto"
+        placeholder="Anote aqui qualquer coisa sobre este dia — salva automaticamente…"
+        value={texto}
+        onChange={(e) => aoDigitar(e.target.value)}
+      />
+    </div>
+  );
+}
+
+const DIAS_SEMANA_TECNICO = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"];
+const NOMES_DIAS_TECNICO = {
+  seg: "Segunda-feira",
+  ter: "Terça-feira",
+  qua: "Quarta-feira",
+  qui: "Quinta-feira",
+  sex: "Sexta-feira",
+};
+
+function diaSemanaKey(date) {
+  return DIAS_SEMANA_TECNICO[date.getDay()];
+}
+
+// Valores padrão iniciais — sexta já com os dados reais informados;
+// quarta com horário provisório (editável na tela).
+const SLOTS_PADRAO_TECNICO = {
+  sex: [
+    {
+      inicio: "10h40",
+      fim: "11h30",
+      disciplina: "Lógica e Linguagem de Programação",
+    },
+    {
+      inicio: "11h30",
+      fim: "12h20",
+      disciplina: "Lógica e Linguagem de Programação",
+    },
+    {
+      inicio: "12h20",
+      fim: "13h10",
+      disciplina: "Lógica e Linguagem de Programação",
+    },
+    {
+      inicio: "13h10",
+      fim: "14h00",
+      disciplina: "Lógica e Linguagem de Programação",
+    },
+  ],
+  qua: [
+    { inicio: "10h40", fim: "11h30", disciplina: "" },
+    { inicio: "11h30", fim: "12h20", disciplina: "" },
+    { inicio: "12h20", fim: "13h10", disciplina: "" },
+  ],
+};
+
+function novoSlotPadrao() {
+  return { inicio: "", fim: "", disciplina: "" };
+}
+
+function TecnicoTab({ user, dataAtualId }) {
+  const [config, setConfig] = useState({});
+  const [dadosDia, setDadosDia] = useState(null);
+  const [totalSemana, setTotalSemana] = useState(null);
+  const [slotsLocais, setSlotsLocais] = useState(null);
+  const saveTimerConfig = useRef(null);
+  const saveTimerConteudo = useRef(null);
+
+  const dataObj = fromId(dataAtualId);
+  const chaveDia = diaSemanaKey(dataObj);
+  const nomeDia = NOMES_DIAS_TECNICO[chaveDia];
+
+  useEffect(() => {
+    if (!user) return;
+    const unsub = observarTecnicoConfig(user.uid, setConfig);
+    return unsub;
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const unsub = observarTecnicoDia(user.uid, dataAtualId, setDadosDia);
+    return unsub;
+  }, [user, dataAtualId]);
+
+  useEffect(() => {
+    if (!saveTimerConfig.current) {
+      const slotsConfig =
+        (config[chaveDia] && config[chaveDia].slots) ||
+        SLOTS_PADRAO_TECNICO[chaveDia] ||
+        [];
+      setSlotsLocais(slotsConfig);
+    }
+  }, [config, chaveDia]);
+
+  useEffect(() => {
+    async function calcular() {
+      if (!user || !nomeDia) {
+        setTotalSemana(null);
+        return;
+      }
+      const { inicio, fim } = primeiroUltimoDiaSemana(dataAtualId);
+      let cursor = fromId(inicio);
+      const fimDate = fromId(fim);
+      let soma = 0;
+      while (cursor <= fimDate) {
+        const id = toId(cursor);
+        const dados = await buscarTecnicoDia(user.uid, id);
+        if (dados && dados.conteudos) {
+          soma += Object.values(dados.conteudos).filter(
+            (c) => c && c.trim() !== "",
+          ).length;
+        }
+        cursor = addDias(cursor, 1);
+      }
+      setTotalSemana(soma);
+    }
+    calcular();
+  }, [user, dataAtualId, dadosDia]);
+
+  if (!nomeDia) {
+    return (
+      <p className="aba-placeholder-texto">
+        Não há aula técnica configurada para finais de semana.
+      </p>
+    );
+  }
+
+  const slots = slotsLocais || [];
+  const conteudos = (dadosDia && dadosDia.conteudos) || {};
+
+  function atualizarSlot(i, campo, valor) {
+    const novosSlots = slots.map((s, idx) =>
+      idx === i ? { ...s, [campo]: valor } : s,
+    );
+    setSlotsLocais(novosSlots);
+    clearTimeout(saveTimerConfig.current);
+    saveTimerConfig.current = setTimeout(() => {
+      salvarTecnicoConfig(user.uid, chaveDia, { slots: novosSlots });
+      saveTimerConfig.current = null;
+    }, 600);
+  }
+
+  function adicionarAula() {
+    const novosSlots = [...slots, novoSlotPadrao()];
+    setSlotsLocais(novosSlots);
+    salvarTecnicoConfig(user.uid, chaveDia, { slots: novosSlots });
+  }
+
+  function removerAula(i) {
+    if (!confirm(`Remover esta aula da configuração de ${nomeDia}?`)) return;
+    const novosSlots = slots.filter((_, idx) => idx !== i);
+    setSlotsLocais(novosSlots);
+    salvarTecnicoConfig(user.uid, chaveDia, { slots: novosSlots });
+  }
+
+  function atualizarConteudo(i, valor) {
+    const novosConteudos = { ...conteudos, [i]: valor };
+    clearTimeout(saveTimerConteudo.current);
+    saveTimerConteudo.current = setTimeout(() => {
+      salvarTecnicoDia(user.uid, dataAtualId, { conteudos: novosConteudos });
+    }, 500);
+    setDadosDia({ ...dadosDia, conteudos: novosConteudos });
+  }
+
+  const totalDiaTecnico = Object.values(conteudos).filter(
+    (c) => c && c.trim() !== "",
+  ).length;
+
+  return (
+    <div className="tecnico-bloco">
+      <h4>
+        {nomeDia} — {fmtDataId(dataAtualId)}
+      </h4>
+      {slots.length === 0 ? (
+        <p className="aba-placeholder-texto">
+          Nenhuma aula técnica configurada para {nomeDia.toLowerCase()} ainda.
+        </p>
+      ) : (
+        <div className="tabela-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Aula</th>
+                <th>Início</th>
+                <th>Fim</th>
+                <th>Disciplina</th>
+                <th>Conteúdo dado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {slots.map((slot, i) => {
+                const preenchida = conteudos[i] && conteudos[i].trim() !== "";
+                return (
+                  <tr key={i} className={preenchida ? "linha-dada" : ""}>
+                    <td>{i + 1}ª aula</td>
+                    <td>
+                      <input
+                        className="input-horario-tecnico"
+                        value={slot.inicio}
+                        onChange={(e) =>
+                          atualizarSlot(i, "inicio", e.target.value)
+                        }
+                      />
+                    </td>
+                    <td>
+                      <input
+                        className="input-horario-tecnico"
+                        value={slot.fim}
+                        onChange={(e) =>
+                          atualizarSlot(i, "fim", e.target.value)
+                        }
+                      />
+                    </td>
+                    <td>
+                      <input
+                        placeholder="ex: Lógica e Linguagem de Programação"
+                        value={slot.disciplina}
+                        onChange={(e) =>
+                          atualizarSlot(i, "disciplina", e.target.value)
+                        }
+                      />
+                    </td>
+                    <td>
+                      <input
+                        placeholder="ex: Estruturas de repetição"
+                        defaultValue={conteudos[i] || ""}
+                        onChange={(e) => atualizarConteudo(i, e.target.value)}
+                      />
+                    </td>
+                    <td>
+                      <button
+                        className="botao-apagar-nota"
+                        onClick={() => removerAula(i)}
+                        title="Remover esta aula da configuração"
+                      >
+                        🗑
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <button className="botao-transferir" onClick={adicionarAula}>
+        + Adicionar aula em {nomeDia.toLowerCase()}
+      </button>
+      <div className="total">
+        <span>
+          Total — {nomeDia}: <strong>{totalDiaTecnico}</strong>
+        </span>
+        <span className="total-semana-rodape">
+          {" "}
+          &nbsp;|&nbsp; Total na semana (Técnico):{" "}
+          <strong>{totalSemana === null ? "…" : totalSemana}</strong>
+        </span>
+      </div>
     </div>
   );
 }
@@ -1306,10 +1614,9 @@ export default function App() {
     return <TelaLogin />;
   }
 
-  const dataObj = fromId(dataAtualId);
   const periodoAtivo = periodoQueCobre(periodos, dataAtualId);
-  const ehHoje = dataAtualId === hojeId();
   const forcarEdicao = forcarEdicaoData === dataAtualId;
+  const ehFimDeSemanaHoje = ehFimDeSemana(fromId(dataAtualId));
 
   return (
     <div className="app">
@@ -1351,66 +1658,92 @@ export default function App() {
         </a>
       </div>
 
-      <div className="nav-dia">
-        <button onClick={() => setDataAtualId(diaAnteriorUtil(dataAtualId))}>
-          ← Dia anterior
-        </button>
-        <div className="nav-dia-central">
-          <input
-            type="date"
-            className={totalDia > 0 ? "data-preenchida" : ""}
-            value={dataAtualId}
-            onChange={(e) => setDataAtualId(e.target.value)}
+      {periodoAtivo && !forcarEdicao ? (
+        <div className="aviso-periodo">
+          <NavDia
+            dataAtualId={dataAtualId}
+            setDataAtualId={setDataAtualId}
+            totalDia={totalDia}
           />
-          <span className="nav-dia-nome">{nomeDiaSemana(dataObj)}</span>
-          {!ehHoje && (
-            <button
-              className="botao-ir-hoje"
-              onClick={() => setDataAtualId(hojeId())}
-            >
-              Ir para hoje
-            </button>
+          <h3>{rotuloTipoPeriodo(periodoAtivo.tipo)}</h3>
+          <p>
+            Período de {fmtDataId(periodoAtivo.inicio)} a{" "}
+            {fmtDataId(periodoAtivo.fim)}
+          </p>
+          {periodoAtivo.observacao && (
+            <p className="aviso-periodo-obs">{periodoAtivo.observacao}</p>
           )}
+          <p className="aviso-periodo-legenda">
+            Este dia está marcado como sem aula. Se precisar registrar uma aula
+            mesmo assim, clique abaixo.
+          </p>
+          <button
+            className="botao-cancelar"
+            onClick={() => setForcarEdicaoData(dataAtualId)}
+          >
+            Registrar aula mesmo assim
+          </button>
         </div>
-        <button onClick={() => setDataAtualId(diaProximoUtil(dataAtualId))}>
-          Próximo dia →
-        </button>
-      </div>
+      ) : (
+        <>
+          <AbaColapsavel
+            titulo="🌅 Turno Manhã"
+            badge={`(${Object.values(manhaDados).filter((d) => d.turma.trim() !== "").length} aulas)`}
+          >
+            <NavDia
+              dataAtualId={dataAtualId}
+              setDataAtualId={setDataAtualId}
+              totalDia={totalDia}
+            />
+            {ehFimDeSemanaHoje ? (
+              <p className="aba-placeholder-texto">
+                Não há aula nos fins de semana.
+              </p>
+            ) : (
+              <Tabela
+                titulo="Turno Manhã"
+                rows={MANHA}
+                dados={manhaDados}
+                onChange={atualizarManha}
+                totalSemana={totalSemana}
+              />
+            )}
+          </AbaColapsavel>
 
-      <RascunhoRapido
-        user={user}
-        dataAtualId={dataAtualId}
-        onTransferido={() => {}}
-      />
+          <AbaColapsavel
+            titulo="🌇 Turno Tarde"
+            badge={`(${Object.values(tardeDados).filter((d) => d.turma.trim() !== "").length} aulas)`}
+          >
+            <NavDia
+              dataAtualId={dataAtualId}
+              setDataAtualId={setDataAtualId}
+              totalDia={totalDia}
+            />
+            {ehFimDeSemanaHoje ? (
+              <p className="aba-placeholder-texto">
+                Não há aula nos fins de semana.
+              </p>
+            ) : (
+              <Tabela
+                titulo="Turno Tarde"
+                rows={TARDE}
+                dados={tardeDados}
+                onChange={atualizarTarde}
+                totalSemana={totalSemana}
+              />
+            )}
+          </AbaColapsavel>
 
-      <ResumoTotais user={user} periodos={periodos} />
-
-      <PainelPeriodos user={user} periodos={periodos} />
-
-      <NotaWidget user={user} />
-
-      <div className="acoes">
-        <span className="status-salvando">
-          {salvando ? "Salvando…" : "Salvo ✓"}
-        </span>
-        <button
-          className="botao-exportar"
-          onClick={aoExportarMesAtual}
-          disabled={exportando}
-        >
-          ⬇ Exportar {nomeMesAno(dataAtualId)}
-        </button>
-        <button
-          className="botao-periodo"
-          onClick={abrirPainelExportar}
-          disabled={exportando}
-        >
-          📅 Escolher período
-        </button>
-        <button className="botao-imprimir" onClick={() => window.print()}>
-          🖨 Imprimir / Compartilhar como PDF
-        </button>
-      </div>
+          <AbaColapsavel titulo="🛠️ Ensino Técnico">
+            <NavDia
+              dataAtualId={dataAtualId}
+              setDataAtualId={setDataAtualId}
+              totalDia={totalDia}
+            />
+            <TecnicoTab user={user} dataAtualId={dataAtualId} />
+          </AbaColapsavel>
+        </>
+      )}
 
       {painelExportar && (
         <div className="painel-exportar">
@@ -1451,83 +1784,44 @@ export default function App() {
         </div>
       )}
 
-      {periodoAtivo && !forcarEdicao ? (
-        <div className="aviso-periodo">
-          <h3>{rotuloTipoPeriodo(periodoAtivo.tipo)}</h3>
-          <p>
-            Período de {fmtDataId(periodoAtivo.inicio)} a{" "}
-            {fmtDataId(periodoAtivo.fim)}
-          </p>
-          {periodoAtivo.observacao && (
-            <p className="aviso-periodo-obs">{periodoAtivo.observacao}</p>
-          )}
-          <p className="aviso-periodo-legenda">
-            Este dia está marcado como sem aula. Se precisar registrar uma aula
-            mesmo assim, clique abaixo.
-          </p>
-          <button
-            className="botao-cancelar"
-            onClick={() => setForcarEdicaoData(dataAtualId)}
-          >
-            Registrar aula mesmo assim
-          </button>
-        </div>
-      ) : (
-        <>
-          <AbaColapsavel
-            titulo="🌅 Turno Manhã"
-            badge={`(${Object.values(manhaDados).filter((d) => d.turma.trim() !== "").length} aulas)`}
-          >
-            <NavDia
-              dataAtualId={dataAtualId}
-              setDataAtualId={setDataAtualId}
-              totalDia={totalDia}
-            />
-            <Tabela
-              titulo="Turno Manhã"
-              rows={MANHA}
-              dados={manhaDados}
-              onChange={atualizarManha}
-              totalSemana={totalSemana}
-            />
-          </AbaColapsavel>
+      <RascunhoRapido
+        user={user}
+        dataAtualId={dataAtualId}
+        onTransferido={() => {}}
+      />
 
-          <AbaColapsavel
-            titulo="🌇 Turno Tarde"
-            badge={`(${Object.values(tardeDados).filter((d) => d.turma.trim() !== "").length} aulas)`}
-          >
-            <NavDia
-              dataAtualId={dataAtualId}
-              setDataAtualId={setDataAtualId}
-              totalDia={totalDia}
-            />
-            <Tabela
-              titulo="Turno Tarde"
-              rows={TARDE}
-              dados={tardeDados}
-              onChange={atualizarTarde}
-              totalSemana={totalSemana}
-            />
-          </AbaColapsavel>
+      <ResumoTotais user={user} periodos={periodos} />
 
-          <AbaColapsavel titulo="🛠️ Ensino Técnico" abaPlaceholder={true}>
-            <p className="aba-placeholder-texto">
-              Em construção — essa aba vai ter uma estrutura própria, separada
-              da contagem de Manhã/Tarde.
-            </p>
-          </AbaColapsavel>
+      <PainelPeriodos user={user} periodos={periodos} />
 
-          <div className="total-geral">
-            <div>
-              Total de aulas no dia: <strong>{totalDia}</strong>
-            </div>
-            <div className="total-semana">
-              Total de aulas nesta semana (Seg a Sex):{" "}
-              <strong>{totalSemana === null ? "…" : totalSemana}</strong>
-            </div>
-          </div>
-        </>
-      )}
+      <NotaWidget
+        user={user}
+        dataAtualId={dataAtualId}
+        setDataAtualId={setDataAtualId}
+      />
+
+      <div className="acoes">
+        <span className="status-salvando">
+          {salvando ? "Salvando…" : "Salvo ✓"}
+        </span>
+        <button
+          className="botao-exportar"
+          onClick={aoExportarMesAtual}
+          disabled={exportando}
+        >
+          ⬇ Exportar {nomeMesAno(dataAtualId)}
+        </button>
+        <button
+          className="botao-periodo"
+          onClick={abrirPainelExportar}
+          disabled={exportando}
+        >
+          📅 Escolher período
+        </button>
+        <button className="botao-imprimir" onClick={() => window.print()}>
+          🖨 Imprimir / Compartilhar como PDF
+        </button>
+      </div>
     </div>
   );
 }
