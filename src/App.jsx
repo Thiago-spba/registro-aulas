@@ -22,6 +22,7 @@ import {
   salvarTecnicoDia,
   observarTecnicoDia,
   buscarTecnicoDia,
+  buscarTecnicoConfigTudo,
 } from "./firebase";
 
 const ESCOLA = "E.E. Prof. Simão Mathias";
@@ -185,6 +186,70 @@ function contarPreenchidos(dados) {
     ? Object.values(dados).filter((d) => d.turma && d.turma.trim() !== "")
         .length
     : 0;
+}
+
+function diasEntre(inicioId, fimId) {
+  const dias = [];
+  let cursor = fromId(inicioId);
+  const fim = fromId(fimId);
+  while (cursor <= fim) {
+    dias.push(toId(cursor));
+    cursor = addDias(cursor, 1);
+  }
+  return dias;
+}
+
+// Conta aulas dadas de um turno (manha/tarde) num intervalo de dias.
+// Busca todos os dias em paralelo (Promise.all) em vez de um por vez,
+// o que deixa o cálculo bem mais rápido quando o intervalo é grande (ex: um mês).
+async function contarTurnoNoIntervalo(uid, inicioId, fimId, turno) {
+  const dias = diasEntre(inicioId, fimId);
+  const resultados = await Promise.all(dias.map((id) => buscarDia(uid, id)));
+  return resultados.reduce((soma, dados) => {
+    if (!dados || !dados[turno]) return soma;
+    return (
+      soma +
+      Object.values(dados[turno]).filter(
+        (d) => d.turma && d.turma.trim() !== "",
+      ).length
+    );
+  }, 0);
+}
+
+// Verifica se, num dado dia da semana (chaveDia: "seg","ter","qua","qui","sex"),
+// a aula de número "indice" ainda é válida — ou seja, existe e não foi
+// removida (marcada como null). Usa a config salva pelo usuário se existir;
+// senão cai no padrão inicial do app.
+function slotValidoNoIndice(configTecnico, chaveDia, indice) {
+  const lista =
+    configTecnico &&
+    configTecnico[chaveDia] &&
+    Array.isArray(configTecnico[chaveDia].slots)
+      ? configTecnico[chaveDia].slots
+      : SLOTS_PADRAO_TECNICO[chaveDia] || [];
+  return lista[indice] != null;
+}
+
+// Mesma ideia, mas para as aulas do Ensino Técnico. Só conta conteúdo
+// preenchido em vagas que ainda existem na grade daquele dia específico
+// da semana (evita contar "aulas fantasmas" de vagas já removidas).
+async function contarTecnicoNoIntervalo(uid, inicioId, fimId) {
+  const dias = diasEntre(inicioId, fimId);
+  const [configTecnico, resultados] = await Promise.all([
+    buscarTecnicoConfigTudo(uid),
+    Promise.all(dias.map((id) => buscarTecnicoDia(uid, id))),
+  ]);
+  return resultados.reduce((soma, dados, idx) => {
+    if (!dados || !dados.conteudos) return soma;
+    const chaveDia = diaSemanaKey(fromId(dias[idx]));
+    const contagem = Object.entries(dados.conteudos).filter(
+      ([indice, c]) =>
+        slotValidoNoIndice(configTecnico, chaveDia, Number(indice)) &&
+        c &&
+        c.trim() !== "",
+    ).length;
+    return soma + contagem;
+  }, 0);
 }
 
 // --- Exportação ---
@@ -481,11 +546,11 @@ function AbaColapsavel({ titulo, badge, abaPlaceholder, children }) {
         className="aba-colapsavel-cabecalho"
         onClick={() => setAberta(!aberta)}
       >
-        <span>
-          {titulo}
-          {badge ? ` ${badge}` : ""}
+        <span className="aba-colapsavel-linha-topo">
+          <span>{titulo}</span>
+          <span className="aba-colapsavel-seta">{aberta ? "▲" : "▼"}</span>
         </span>
-        <span className="aba-colapsavel-seta">{aberta ? "▲" : "▼"}</span>
+        {badge && <span className="aba-colapsavel-badge">{badge}</span>}
       </button>
       {aberta && <div className="aba-colapsavel-conteudo">{children}</div>}
     </div>
@@ -1245,7 +1310,61 @@ function novoSlotPadrao() {
   return { inicio: "", fim: "", disciplina: "" };
 }
 
-function TecnicoTab({ user, dataAtualId }) {
+// Duração padrão de uma aula, em minutos — usada só pra SUGERIR um horário
+// quando o campo está em branco. É a mesma duração das aulas que você já
+// tinha preenchido (9h50 às 10h40 = 50 minutos).
+const DURACAO_PADRAO_AULA_MIN = 50;
+
+// Aceita tanto "9:50" quanto "9h50" (os dois formatos que já apareciam
+// nos seus dados) e devolve o total em minutos desde meia-noite.
+function parseHorarioParaMinutos(str) {
+  if (!str) return null;
+  const m = String(str)
+    .trim()
+    .match(/^(\d{1,2})[h:](\d{2})$/i);
+  if (!m) return null;
+  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+}
+
+function minutosParaHorario(totalMin) {
+  const h = Math.floor(totalMin / 60) % 24;
+  const min = totalMin % 60;
+  return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+}
+
+// Percorre as aulas de um dia, em ordem, e preenche os "buracos" de horário
+// em branco com uma sugestão: início = fim da aula anterior, fim = início + 50min.
+// Não SALVA nada — é só o que aparece na tela quando o campo real está vazio.
+// Assim que o usuário digita algo, o valor real dele passa a valer.
+function calcularHorariosEfetivos(slots) {
+  const efetivos = [];
+  let relogioMin = null;
+  for (let i = 0; i < slots.length; i++) {
+    const slot = slots[i];
+    if (slot == null) {
+      efetivos.push(null);
+      continue;
+    }
+    let inicioMin =
+      parseHorarioParaMinutos(slot.inicio) ??
+      (relogioMin != null ? relogioMin : null);
+    let fimMin =
+      parseHorarioParaMinutos(slot.fim) ??
+      (inicioMin != null ? inicioMin + DURACAO_PADRAO_AULA_MIN : null);
+
+    efetivos.push({
+      inicio:
+        slot.inicio || (inicioMin != null ? minutosParaHorario(inicioMin) : ""),
+      fim: slot.fim || (fimMin != null ? minutosParaHorario(fimMin) : ""),
+      inicioSugerido: !slot.inicio && inicioMin != null,
+      fimSugerido: !slot.fim && fimMin != null,
+    });
+    if (fimMin != null) relogioMin = fimMin;
+  }
+  return efetivos;
+}
+
+function TecnicoTab({ user, dataAtualId, onResumoChange }) {
   const [config, setConfig] = useState({});
   const [dadosDia, setDadosDia] = useState(null);
   const [totalSemana, setTotalSemana] = useState(null);
@@ -1281,28 +1400,43 @@ function TecnicoTab({ user, dataAtualId }) {
 
   useEffect(() => {
     async function calcular() {
-      if (!user || !nomeDia) {
+      if (!user) {
         setTotalSemana(null);
         return;
       }
-      const { inicio, fim } = primeiroUltimoDiaSemana(dataAtualId);
-      let cursor = fromId(inicio);
-      const fimDate = fromId(fim);
-      let soma = 0;
-      while (cursor <= fimDate) {
-        const id = toId(cursor);
-        const dados = await buscarTecnicoDia(user.uid, id);
-        if (dados && dados.conteudos) {
-          soma += Object.values(dados.conteudos).filter(
-            (c) => c && c.trim() !== "",
-          ).length;
-        }
-        cursor = addDias(cursor, 1);
-      }
-      setTotalSemana(soma);
+      const { inicio: iniSemana, fim: fimSemana } =
+        primeiroUltimoDiaSemana(dataAtualId);
+      const semana = await contarTecnicoNoIntervalo(
+        user.uid,
+        iniSemana,
+        fimSemana,
+      );
+      setTotalSemana(semana);
     }
     calcular();
   }, [user, dataAtualId, dadosDia]);
+
+  // Transforma a sugestão de horário (o "rascunho a lápis") em dado real
+  // salvo — igual ao horário da 1ª aula, que já é digitado normalmente.
+  // Roda de novo sozinho até não sobrar nenhuma sugestão pendente.
+  useEffect(() => {
+    if (!user || !slotsLocais || slotsLocais.length === 0) return;
+    const efetivos = calcularHorariosEfetivos(slotsLocais);
+    let mudou = false;
+    const novosSlots = slotsLocais.map((s, i) => {
+      if (s == null) return s;
+      const ef = efetivos[i];
+      if (ef.inicioSugerido || ef.fimSugerido) {
+        mudou = true;
+        return { ...s, inicio: ef.inicio, fim: ef.fim };
+      }
+      return s;
+    });
+    if (mudou) {
+      setSlotsLocais(novosSlots);
+      salvarTecnicoConfig(user.uid, chaveDia, { slots: novosSlots });
+    }
+  }, [slotsLocais, user, chaveDia]);
 
   if (!nomeDia) {
     return (
@@ -1335,7 +1469,10 @@ function TecnicoTab({ user, dataAtualId }) {
 
   function removerAula(i) {
     if (!confirm(`Remover esta aula da configuração de ${nomeDia}?`)) return;
-    const novosSlots = slots.filter((_, idx) => idx !== i);
+    // Em vez de tirar o item do meio da lista (o que empurraria os números
+    // das aulas seguintes), marcamos a vaga como "null" — ela some da tela,
+    // mas as outras aulas continuam com o mesmo número de antes.
+    const novosSlots = slots.map((s, idx) => (idx === i ? null : s));
     setSlotsLocais(novosSlots);
     salvarTecnicoConfig(user.uid, chaveDia, { slots: novosSlots });
   }
@@ -1343,22 +1480,31 @@ function TecnicoTab({ user, dataAtualId }) {
   function atualizarConteudo(i, valor) {
     const novosConteudos = { ...conteudos, [i]: valor };
     clearTimeout(saveTimerConteudo.current);
-    saveTimerConteudo.current = setTimeout(() => {
-      salvarTecnicoDia(user.uid, dataAtualId, { conteudos: novosConteudos });
+    saveTimerConteudo.current = setTimeout(async () => {
+      await salvarTecnicoDia(user.uid, dataAtualId, {
+        conteudos: novosConteudos,
+      });
+      if (onResumoChange) onResumoChange();
     }, 500);
     setDadosDia({ ...dadosDia, conteudos: novosConteudos });
   }
 
-  const totalDiaTecnico = Object.values(conteudos).filter(
-    (c) => c && c.trim() !== "",
+  // Só conta o conteúdo das aulas que realmente aparecem na grade de hoje.
+  // Isso evita contar "aulas fantasmas": conteúdo antigo que ficou salvo
+  // num número de aula que já foi removido da grade (ex: você tinha 3 aulas,
+  // preencheu as 3, depois apagou a 3ª — o texto dela não deve mais contar).
+  const totalDiaTecnico = Object.entries(conteudos).filter(
+    ([indice, c]) => slots[Number(indice)] != null && c && c.trim() !== "",
   ).length;
+
+  const horariosEfetivos = calcularHorariosEfetivos(slots);
 
   return (
     <div className="tecnico-bloco">
       <h4>
         {nomeDia} — {fmtDataId(dataAtualId)}
       </h4>
-      {slots.length === 0 ? (
+      {slots.length === 0 || slots.every((s) => s == null) ? (
         <p className="aba-placeholder-texto">
           Nenhuma aula técnica configurada para {nomeDia.toLowerCase()} ainda.
         </p>
@@ -1377,14 +1523,25 @@ function TecnicoTab({ user, dataAtualId }) {
             </thead>
             <tbody>
               {slots.map((slot, i) => {
+                if (slot == null) return null;
+                const ef = horariosEfetivos[i];
                 const preenchida = conteudos[i] && conteudos[i].trim() !== "";
                 return (
                   <tr key={i} className={preenchida ? "linha-dada" : ""}>
-                    <td>{i + 1}ª aula</td>
+                    <td className="celula-numero-aula">
+                      <input
+                        className="input-numero-aula"
+                        value={slot.numero ?? i + 1}
+                        onChange={(e) =>
+                          atualizarSlot(i, "numero", e.target.value)
+                        }
+                      />
+                      ª aula
+                    </td>
                     <td>
                       <input
                         className="input-horario-tecnico"
-                        value={slot.inicio}
+                        value={ef.inicio}
                         onChange={(e) =>
                           atualizarSlot(i, "inicio", e.target.value)
                         }
@@ -1393,7 +1550,7 @@ function TecnicoTab({ user, dataAtualId }) {
                     <td>
                       <input
                         className="input-horario-tecnico"
-                        value={slot.fim}
+                        value={ef.fim}
                         onChange={(e) =>
                           atualizarSlot(i, "fim", e.target.value)
                         }
@@ -1480,7 +1637,12 @@ export default function App() {
   const [periodoInicioExp, setPeriodoInicioExp] = useState(hojeId());
   const [periodoFimExp, setPeriodoFimExp] = useState(hojeId());
   const [exportando, setExportando] = useState(false);
-  const [totalSemana, setTotalSemana] = useState(null);
+  const [resumoManha, setResumoManha] = useState({ semana: null, mes: null });
+  const [resumoTarde, setResumoTarde] = useState({ semana: null, mes: null });
+  const [resumoTecnico, setResumoTecnico] = useState({
+    semana: null,
+    mes: null,
+  });
   const saveTimer = useRef(null);
 
   useEffect(() => {
@@ -1508,30 +1670,35 @@ export default function App() {
     return unsub;
   }, [user, dataAtualId]);
 
-  async function recalcularTotalSemana() {
+  async function recalcularResumos() {
     if (!user) return;
-    const { inicio, fim } = primeiroUltimoDiaSemana(dataAtualId);
-    let cursor = fromId(inicio);
-    const fimDate = fromId(fim);
-    let soma = 0;
-    while (cursor <= fimDate) {
-      const id = toId(cursor);
-      const dados = await buscarDia(user.uid, id);
-      if (dados) {
-        soma += Object.values(dados.manha || {}).filter(
-          (d) => d.turma && d.turma.trim() !== "",
-        ).length;
-        soma += Object.values(dados.tarde || {}).filter(
-          (d) => d.turma && d.turma.trim() !== "",
-        ).length;
-      }
-      cursor = addDias(cursor, 1);
-    }
-    setTotalSemana(soma);
+    const { inicio: iniSemana, fim: fimSemana } =
+      primeiroUltimoDiaSemana(dataAtualId);
+    const { inicio: iniMes, fim: fimMes } = primeiroUltimoDiaMes(dataAtualId);
+
+    const [
+      manhaSemana,
+      manhaMes,
+      tardeSemana,
+      tardeMes,
+      tecnicoSemana,
+      tecnicoMes,
+    ] = await Promise.all([
+      contarTurnoNoIntervalo(user.uid, iniSemana, fimSemana, "manha"),
+      contarTurnoNoIntervalo(user.uid, iniMes, fimMes, "manha"),
+      contarTurnoNoIntervalo(user.uid, iniSemana, fimSemana, "tarde"),
+      contarTurnoNoIntervalo(user.uid, iniMes, fimMes, "tarde"),
+      contarTecnicoNoIntervalo(user.uid, iniSemana, fimSemana),
+      contarTecnicoNoIntervalo(user.uid, iniMes, fimMes),
+    ]);
+
+    setResumoManha({ semana: manhaSemana, mes: manhaMes });
+    setResumoTarde({ semana: tardeSemana, mes: tardeMes });
+    setResumoTecnico({ semana: tecnicoSemana, mes: tecnicoMes });
   }
 
   useEffect(() => {
-    recalcularTotalSemana();
+    recalcularResumos();
   }, [user, dataAtualId]);
 
   function agendarSalvar(novaManha, novaTarde) {
@@ -1544,7 +1711,7 @@ export default function App() {
         tarde: novaTarde,
       });
       setSalvando(false);
-      recalcularTotalSemana();
+      recalcularResumos();
     }, 600);
   }
 
@@ -1687,8 +1854,8 @@ export default function App() {
       ) : (
         <>
           <AbaColapsavel
-            titulo="🌅 Turno Manhã"
-            badge={`(${Object.values(manhaDados).filter((d) => d.turma.trim() !== "").length} aulas)`}
+            titulo="🌅 Turno Manhã - Aula eventual"
+            badge={`Semana: ${resumoManha.semana ?? "…"} · Mês: ${resumoManha.mes ?? "…"}`}
           >
             <NavDia
               dataAtualId={dataAtualId}
@@ -1705,14 +1872,14 @@ export default function App() {
                 rows={MANHA}
                 dados={manhaDados}
                 onChange={atualizarManha}
-                totalSemana={totalSemana}
+                totalSemana={resumoManha.semana}
               />
             )}
           </AbaColapsavel>
 
           <AbaColapsavel
-            titulo="🌇 Turno Tarde"
-            badge={`(${Object.values(tardeDados).filter((d) => d.turma.trim() !== "").length} aulas)`}
+            titulo="🌇 Turno Tarde - Aula eventual"
+            badge={`Semana: ${resumoTarde.semana ?? "…"} · Mês: ${resumoTarde.mes ?? "…"}`}
           >
             <NavDia
               dataAtualId={dataAtualId}
@@ -1729,18 +1896,25 @@ export default function App() {
                 rows={TARDE}
                 dados={tardeDados}
                 onChange={atualizarTarde}
-                totalSemana={totalSemana}
+                totalSemana={resumoTarde.semana}
               />
             )}
           </AbaColapsavel>
 
-          <AbaColapsavel titulo="🛠️ Ensino Técnico">
+          <AbaColapsavel
+            titulo="🛠️ Ensino Técnico"
+            badge={`Semana: ${resumoTecnico.semana ?? "…"} · Mês: ${resumoTecnico.mes ?? "…"}`}
+          >
             <NavDia
               dataAtualId={dataAtualId}
               setDataAtualId={setDataAtualId}
               totalDia={totalDia}
             />
-            <TecnicoTab user={user} dataAtualId={dataAtualId} />
+            <TecnicoTab
+              user={user}
+              dataAtualId={dataAtualId}
+              onResumoChange={recalcularResumos}
+            />
           </AbaColapsavel>
         </>
       )}

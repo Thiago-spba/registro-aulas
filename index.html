@@ -1,15 +1,28 @@
 <!doctype html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/icon-192.png" />
-    <link rel="apple-touch-icon" href="/icon-192.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#2F5496" />
-    <title>Controle de Aulas - E.E. Prof. Simao Mathias</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="/icon-192.png" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#2F5496" />
+  <title>Controle de Aulas</title>
+
+  <!-- Preconnect: o navegador já resolve o endereço e faz o "aperto de mão"
+         (handshake) de segurança com esses domínios ANTES de você precisar
+         deles, então quando o app ou os botões forem usados, essa etapa
+         já está adiantada. -->
+  <link rel="preconnect" href="https://firestore.googleapis.com" />
+  <link rel="preconnect" href="https://identitytoolkit.googleapis.com" />
+  <link rel="preconnect" href="https://apis.google.com" />
+  <link rel="dns-prefetch" href="https://saladofuturo.educacao.sp.gov.br" />
+  <link rel="dns-prefetch" href="https://sed.educacao.sp.gov.br" />
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+
 </html>

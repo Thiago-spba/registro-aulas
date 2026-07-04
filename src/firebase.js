@@ -1,6 +1,17 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, doc, setDoc, deleteDoc, getDoc, onSnapshot, collection } from "firebase/firestore";
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  doc,
+  setDoc,
+  deleteDoc,
+  getDoc,
+  getDocs,
+  onSnapshot,
+  collection,
+} from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBg2AEb82yO5Sk2TPuITfdPRscoDr-P2P8",
@@ -13,7 +24,23 @@ const firebaseConfig = {
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+
+// Em vez do getFirestore(app) padrão, usamos initializeFirestore com duas
+// otimizações pensadas pra rede de escola (firewall/proxy restritivo):
+//
+// 1. experimentalAutoDetectLongPolling: o app já detecta rápido se a
+//    conexão "moderna" (streaming) está bloqueada, e cai direto no método
+//    mais simples e compatível (long polling) — sem ficar preso esperando
+//    a conexão moderna falhar sozinha, que é o que causava a demora.
+// 2. persistentLocalCache: guarda uma cópia dos dados no próprio aparelho
+//    (como um cache de navegador), pra abrir instantâneo nas próximas vezes,
+//    mesmo com internet ruim no momento.
+export const db = initializeFirestore(app, {
+  experimentalAutoDetectLongPolling: true,
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager(),
+  }),
+});
 const provider = new GoogleAuthProvider();
 
 export async function loginComGoogle() {
@@ -143,6 +170,18 @@ export function observarTecnicoDia(uid, dataId, callback) {
 export async function buscarTecnicoDia(uid, dataId) {
   const snap = await getDoc(doc(db, "usuarios", uid, "tecnico_dias", dataId));
   return snap.exists() ? snap.data() : null;
+}
+
+// Busca a configuração (grade de horários) de TODOS os dias da semana de uma vez.
+// Usado pra saber quantos slots existem hoje em cada dia, e não contar
+// "aulas fantasmas" de slots que já foram removidos da grade.
+export async function buscarTecnicoConfigTudo(uid) {
+  const snap = await getDocs(collection(db, "usuarios", uid, "tecnico_config"));
+  const config = {};
+  snap.docs.forEach((d) => {
+    config[d.id] = d.data();
+  });
+  return config;
 }
 
 // --- Notas por dia (substitui a nota unica antiga) ---

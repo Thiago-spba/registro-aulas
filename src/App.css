@@ -998,8 +998,9 @@ td input { color: var(--text); }
 .aba-colapsavel-cabecalho {
   width: 100%;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
   padding: 10px 14px;
   background: #1e3a8a;
   color: #fff;
@@ -1008,6 +1009,19 @@ td input { color: var(--text); }
   font-size: 0.95rem;
   cursor: pointer;
   text-align: left;
+}
+
+.aba-colapsavel-linha-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.aba-colapsavel-badge {
+  font-size: 0.78rem;
+  font-weight: normal;
+  opacity: 0.85;
+  white-space: normal;
 }
 
 .aba-colapsavel-cabecalho:hover {
@@ -1043,6 +1057,16 @@ td input { color: var(--text); }
 
 .input-horario-tecnico {
   width: 70px;
+}
+
+.input-numero-aula {
+  width: 32px;
+  text-align: center;
+  margin-right: 4px;
+}
+
+.celula-numero-aula {
+  white-space: nowrap;
 }
 
 .tecnico-bloco .total {
@@ -1151,4 +1175,3 @@ td input { color: var(--text); }
     font-size: 0.65rem;
   }
 }
-
